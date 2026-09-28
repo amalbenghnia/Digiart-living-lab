@@ -1,0 +1,29 @@
+# Environments
+.env
+.venv
+env/
+venv/
+ENV/
+
+# Project specific secrets and databases
+credentials/
+data/
+n8n_data/
+ollama_data/
+_scratch/
+*.sqlite3
+*.db
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+htmlcov/
+.coverage
+.coverage.*
+
+# IDEs
+.vscode/
+.idea/
+.DS_Store

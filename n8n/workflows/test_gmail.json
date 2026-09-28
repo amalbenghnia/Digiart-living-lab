@@ -1,0 +1,1 @@
+{"nodes": [{"parameters": {"sendTo": "test@test.com", "subject": "test", "emailType": "text", "message": "test", "options": {"attachments": "attachment_data"}}, "name": "Gmail", "type": "n8n-nodes-base.gmail", "typeVersion": 2.1}]}

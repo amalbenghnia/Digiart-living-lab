@@ -1,0 +1,232 @@
+{
+  "name": "Lead Agent - Intake and Analyse",
+  "meta": {
+    "description": "Sprint 1 automation. Receives a new lead (from a Google Form / Meta Ads webhook / manual entry relay), calls the Lead Agent API to create it, immediately runs the analyse pipeline (mandatory fields -> duplicate check -> baseline score -> priority -> task), and routes the result to the right Slack/Chat channel depending on priority. This is the n8n counterpart to app/services/automation_service.py's four trigger_*() stubs -- once N8N_WEBHOOK_BASE_URL is set in .env, the API calls straight into the three webhook nodes at the bottom of this workflow."
+  },
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "lead-intake",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "id": "webhook-lead-intake",
+      "name": "Webhook: New Lead",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -40,
+        300
+      ],
+      "webhookId": "lead-intake"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "has-fullname",
+              "leftValue": "={{$json.body.fullname}}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "if-payload-valid",
+      "name": "IF: payload has fullname",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        180,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://127.0.0.1:8000/lead/new",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  fullname: $json.body.fullname,\n  phone: $json.body.phone || null,\n  email: $json.body.email || null,\n  training: $json.body.training,\n  source: $json.body.source || \"meta_ads\",\n  raw_message: $json.body.message || null\n}) }}",
+        "options": {
+          "timeout": 10000
+        }
+      },
+      "id": "http-create-lead",
+      "name": "POST /lead/new",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        400,
+        220
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://127.0.0.1:8000/lead/analyse",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ lead_id: $json.id }) }}",
+        "options": {
+          "timeout": 120000
+        }
+      },
+      "id": "http-analyse-lead",
+      "name": "POST /lead/analyse",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        620,
+        220
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "is-p0",
+              "leftValue": "={{$json.priority}}",
+              "rightValue": "P0",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "if-hot-lead",
+      "name": "IF: priority is P0",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        840,
+        220
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "send",
+        "subject": "=🚨 Lead URGENT (P0) : {{$json.fullname}}",
+        "message": "=Lead chaud (P0) : {{$json.fullname}} - {{$json.training}}.\n\nA appeler dans les 2h.\nScore: {{$json.score}}.\nTelephone: {{$json.phone}}",
+        "toList": [
+          "={{$env.NOTIFY_CM_EMAIL || 'cm@digiart.local'}}"
+        ],
+        "options": {}
+      },
+      "id": "slack-notify-sdr",
+      "name": "Notify SDR (urgent email)",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        1060,
+        140
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "send",
+        "subject": "=Nouveau lead reçu : {{$json.fullname}} ({{$json.priority}})",
+        "message": "=Nouveau lead : {{$json.fullname}} ({{$json.priority}}) - {{$json.training}}.\nTelephone: {{$json.phone}}",
+        "toList": [
+          "={{$env.NOTIFY_CM_EMAIL || 'cm@digiart.local'}}"
+        ],
+        "options": {}
+      },
+      "id": "slack-notify-daily",
+      "name": "Notify daily email",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        1060,
+        320
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook: New Lead": {
+      "main": [
+        [
+          {
+            "node": "IF: payload has fullname",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF: payload has fullname": {
+      "main": [
+        [
+          {
+            "node": "POST /lead/new",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "POST /lead/new": {
+      "main": [
+        [
+          {
+            "node": "POST /lead/analyse",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "POST /lead/analyse": {
+      "main": [
+        [
+          {
+            "node": "IF: priority is P0",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF: priority is P0": {
+      "main": [
+        [
+          {
+            "node": "Notify SDR (urgent email)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Notify daily email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

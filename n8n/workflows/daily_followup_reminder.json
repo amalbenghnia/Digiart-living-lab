@@ -1,0 +1,121 @@
+{
+  "name": "Lead Agent - Daily Follow-up Reminder",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 9 * * *"
+            }
+          ]
+        }
+      },
+      "name": "Every morning at 9AM",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        250,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "url": "http://127.0.0.1:8000/leads/followup-due",
+        "options": {}
+      },
+      "name": "Get Due Leads",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        450,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "number": [
+            {
+              "value1": "={{ $json.count }}",
+              "operation": "larger",
+              "value2": 0
+            }
+          ]
+        }
+      },
+      "name": "Are there leads to follow up?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        650,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "sendTo": "votreadresse@gmail.com",
+        "subject": "={{ $json.count }} relance(s) urgente(s) aujourd'hui",
+        "emailType": "html",
+        "message": "=<h2>\ud83d\udcca Relances du jour</h2>\n<p>Bonjour,</p>\n<p>Voici la liste des prospects qui n\u00e9cessitent votre attention :</p>\n\n{{ $json.leads.map((lead, index) => {\n    let today = new Date().toISOString().split('T')[0];\n    let isOverdue = lead.next_followup_date < today;\n    let badge = isOverdue \n        ? '<span style=\"background-color: #ef4444; color: white; padding: 2px 8px; border-radius: 12px; font-size: 12px; font-weight: bold; margin-left: 10px;\">\ud83d\udea8 EN RETARD (' + lead.next_followup_date + ')</span>' \n        : '<span style=\"background-color: #3b82f6; color: white; padding: 2px 8px; border-radius: 12px; font-size: 12px; font-weight: bold; margin-left: 10px;\">\ud83d\udcc5 AUJOURD\\'HUI</span>';\n        \n    return `\n<div style=\"border-left: 4px solid ${isOverdue ? '#ef4444' : '#3b82f6'}; padding-left: 15px; margin-bottom: 25px; font-family: sans-serif;\">\n    <h3 style=\"margin: 0; color: #1e40af;\">${index + 1}. ${lead.fullname} ${badge}</h3>\n    <p style=\"margin: 5px 0; color: #4b5563;\">\n        <strong>Formation :</strong> ${lead.training}<br>\n        <strong>T\u00e9l\u00e9phone :</strong> <a href=\"tel:${lead.phone}\" style=\"color: #2563eb;\">${lead.phone}</a><br>\n        <strong>Dernier contact :</strong> ${lead.last_contact ? lead.last_contact.substring(0,10) : 'Jamais'}\n    </p>\n    <div style=\"background-color: #fef2f2; color: #991b1b; padding: 12px; border-radius: 6px; font-size: 14px; border: 1px solid #fecaca;\">\n        <strong>\u26a0\ufe0f Action attendue :</strong><br>\n        ${lead.next_action || 'Contacter ce prospect pour la premi\u00e8re fois.'}\n    </div>\n</div>\n`}).join('') }}\n\n<p style=\"font-family: sans-serif; color: #4b5563;\">Bon courage !</p>",
+        "options": {}
+      },
+      "name": "Send Email",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        850,
+        280
+      ],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "gmail",
+          "name": "Gmail account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Every morning at 9AM": {
+      "main": [
+        [
+          {
+            "node": "Get Due Leads",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Due Leads": {
+      "main": [
+        [
+          {
+            "node": "Are there leads to follow up?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Are there leads to follow up?": {
+      "main": [
+        [
+          {
+            "node": "Send Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "48b6c4eb-37ea-43f1-b9cd-90769d675b3d",
+  "id": "v8SEgvibOIHwSe3p",
+  "tags": []
+}

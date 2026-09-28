@@ -1,0 +1,85 @@
+{
+  "name": "Lead Agent - Daily Excel Export",
+  "meta": {
+    "description": "Runs every day at 8:30am. Triggers GET /leads/export-excel to generate and hard-save an Excel file of all leads sorted by priority (P0 first, score desc). Persists LLM scoring work to disk so sales history is never lost."
+  },
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 8,
+              "triggerAtMinute": 30
+            }
+          ]
+        }
+      },
+      "id": "cron-daily-830am",
+      "name": "Every day at 8:30am",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -40,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "http://127.0.0.1:8000/leads/export-excel",
+        "options": {
+          "timeout": 15000
+        }
+      },
+      "id": "http-get-export-excel",
+      "name": "GET /leads/export-excel",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        180,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{$env.NOTIFY_FROM_EMAIL || 'agent@digiart.local'}}",
+        "toEmail": "={{$env.NOTIFY_CM_EMAIL || 'cm@digiart.local'}}",
+        "subject": "=Fichier Excel des leads genere - {{$now.format('dd/MM/yyyy')}}",
+        "text": "=Le fichier Excel du jour contenant l'ensemble des leads tries par priorite (P0, P1, P2) a ete genere et sauvegarde avec succes dans le dossier data/ du serveur."
+      },
+      "id": "send-excel-export-notification",
+      "name": "Send Excel export notification",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        400,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "Every day at 8:30am": {
+      "main": [
+        [
+          {
+            "node": "GET /leads/export-excel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GET /leads/export-excel": {
+      "main": [
+        [
+          {
+            "node": "Send Excel export notification",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

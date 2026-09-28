@@ -1,0 +1,379 @@
+{
+  "name": "SDR Agent: Workflow Combiné (Brief & Outcome)",
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "documentId": {
+          "__rl": true,
+          "value": "",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "",
+          "mode": "name"
+        },
+        "event": "rowUpdated",
+        "options": {}
+      },
+      "id": "d0e1c6a2-990a-4fb4-818f-a9514f7b6009",
+      "name": "Trigger: Générer Brief",
+      "type": "n8n-nodes-base.googleSheetsTrigger",
+      "typeVersion": 1,
+      "position": [220, 100]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json['Générer Brief'] }}",
+              "value2": "TRUE"
+            }
+          ]
+        }
+      },
+      "id": "c71a3964-b816-4bc2-80ba-3b603eb152de",
+      "name": "IF Brief Requested",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [440, 100]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:8000/sdr/brief",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "lead_id",
+              "value": "={{ $json.id }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "d043d99f-e3c3-4d64-9988-14227847cbe9",
+      "name": "API: /sdr/brief",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [660, 80]
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "SDR Brief": "={{ $json.customer_summary }}\\n\\n{{ $json.suggested_pitch }}\\n\\n{{ $json.predicted_objections }}",
+            "SDR Email Draft": "={{ $json.email_draft_html }}",
+            "Générer Brief": "FALSE"
+          }
+        },
+        "options": {}
+      },
+      "id": "76dfb8d2-3375-4c07-b2e1-c0a6bbf08b1a",
+      "name": "Update Brief in Sheet",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.1,
+      "position": [880, 80]
+    },
+
+
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "documentId": {
+          "__rl": true,
+          "value": "",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "",
+          "mode": "name"
+        },
+        "event": "rowUpdated",
+        "options": {}
+      },
+      "id": "e1f2c6a2-990a-4fb4-818f-a9514f7b6009",
+      "name": "Trigger: Issue de l'Appel",
+      "type": "n8n-nodes-base.googleSheetsTrigger",
+      "typeVersion": 1,
+      "position": [220, 500]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json['Issue de l\\'Appel'] }}",
+              "operation": "isNotEmpty"
+            }
+          ]
+        }
+      },
+      "id": "c81a3964-b816-4bc2-80ba-3b603eb152de",
+      "name": "IF Outcome Filled",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [440, 500]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:8000/sdr/outcome",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "lead_id",
+              "value": "={{ $json.id }}"
+            },
+            {
+              "name": "outcome",
+              "value": "={{ $json['Issue de l\\'Appel'] }}"
+            },
+            {
+              "name": "call_notes",
+              "value": "={{ $json.Notes }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "d143d99f-e3c3-4d64-9988-14227847cbe9",
+      "name": "API: /sdr/outcome",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [660, 480]
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Statut": "={{ $json.new_status }}",
+            "Résumé de l'Appel": "={{ $json.call_summary }}",
+            "Action Suivante": "={{ $json.suggested_next_action }}",
+            "Date Relance": "={{ $json.next_followup_date }}",
+            "Issue de l'Appel": ""
+          }
+        },
+        "options": {}
+      },
+      "id": "87dfb8d2-3375-4c07-b2e1-c0a6bbf08b1a",
+      "name": "Update Status in Sheet",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.1,
+      "position": [880, 480]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $('API: /sdr/outcome').item.json.follow_up_email_draft }}",
+              "operation": "isNotEmpty"
+            }
+          ]
+        }
+      },
+      "id": "a91a3964-b816-4bc2-80ba-3b603eb152df",
+      "name": "IF Email Draft Generated",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [1100, 380]
+    },
+    {
+      "parameters": {
+        "resource": "draft",
+        "operation": "create",
+        "subject": "Suite à notre échange - Net-Info",
+        "message": "={{ $('API: /sdr/outcome').item.json.follow_up_email_draft }}",
+        "toList": [
+          "={{ $('Trigger: Issue de l\\'Appel').item.json.Email }}"
+        ],
+        "options": {}
+      },
+      "id": "b11a3964-b816-4bc2-80ba-3b603eb152d1",
+      "name": "Gmail Draft",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2,
+      "position": [1320, 360]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $('API: /sdr/outcome').item.json.next_followup_date }}",
+              "operation": "isNotEmpty"
+            }
+          ]
+        }
+      },
+      "id": "c91a3964-b816-4bc2-80ba-3b603eb152dg",
+      "name": "IF FollowUp Required",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [1100, 600]
+    },
+    {
+      "parameters": {
+        "title": "Relancer {{ $('Trigger: Issue de l\\'Appel').item.json['Nom complet'] }}",
+        "notes": "={{ $('API: /sdr/outcome').item.json.call_summary }}\\n\\nAction reco: {{ $('API: /sdr/outcome').item.json.suggested_next_action }}",
+        "due": "={{ $('API: /sdr/outcome').item.json.next_followup_date }}T09:00:00Z"
+      },
+      "id": "d11a3964-b816-4bc2-80ba-3b603eb152d2",
+      "name": "Google Tasks",
+      "type": "n8n-nodes-base.googleTasks",
+      "typeVersion": 1,
+      "position": [1320, 580]
+    }
+  ],
+  "connections": {
+    "Trigger: Générer Brief": {
+      "main": [
+        [
+          {
+            "node": "IF Brief Requested",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF Brief Requested": {
+      "main": [
+        [
+          {
+            "node": "API: /sdr/brief",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "API: /sdr/brief": {
+      "main": [
+        [
+          {
+            "node": "Update Brief in Sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Trigger: Issue de l'Appel": {
+      "main": [
+        [
+          {
+            "node": "IF Outcome Filled",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF Outcome Filled": {
+      "main": [
+        [
+          {
+            "node": "API: /sdr/outcome",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "API: /sdr/outcome": {
+      "main": [
+        [
+          {
+            "node": "Update Status in Sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Status in Sheet": {
+      "main": [
+        [
+          {
+            "node": "IF Email Draft Generated",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "IF FollowUp Required",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF Email Draft Generated": {
+      "main": [
+        [
+          {
+            "node": "Gmail Draft",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF FollowUp Required": {
+      "main": [
+        [
+          {
+            "node": "Google Tasks",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

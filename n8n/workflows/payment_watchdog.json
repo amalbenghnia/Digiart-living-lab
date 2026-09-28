@@ -1,0 +1,267 @@
+{
+  "name": "Lead Agent - Payment Watchdog",
+  "meta": {
+    "description": "Runs every hour. Pulls all leads from the API, keeps only those the business rules layer flags as payment-overdue (status=confirmed_unpaid, pending payment, last_contact older than PAYMENT_OVERDUE_DAYS), and posts a grouped alert to the SDR channel. This workflow never sends anything to the lead itself -- it only alerts a human (Ines). The actual relance message is drafted by IA4 SDR Support in a later sprint and always requires human validation before it goes out."
+  },
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 1
+            }
+          ]
+        }
+      },
+      "id": "cron-hourly",
+      "name": "Every hour",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -40,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "http://127.0.0.1:8000/leads",
+        "options": {
+          "timeout": 10000
+        }
+      },
+      "id": "http-get-leads",
+      "name": "GET /leads",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        180,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "leads",
+        "options": {}
+      },
+      "id": "split-leads",
+      "name": "Split leads",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        400,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "is-confirmed-unpaid",
+              "leftValue": "={{$json.status}}",
+              "rightValue": "confirmed_unpaid",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            },
+            {
+              "id": "is-pending",
+              "leftValue": "={{$json.payment_status}}",
+              "rightValue": "pending",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "filter-candidates",
+      "name": "Filter: unpaid + pending",
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2,
+      "position": [
+        620,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://127.0.0.1:8000/lead/priority",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ lead_id: $json.id }) }}",
+        "options": {
+          "timeout": 15000,
+          "batching": {
+            "batch": {
+              "batchSize": 1,
+              "batchInterval": 2000
+            }
+          }
+        }
+      },
+      "id": "http-recheck-rule",
+      "name": "Re-check overdue rule via API",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        840,
+        300
+      ],
+      "notes": "The /lead/priority endpoint re-runs is_payment_overdue() from lead_rules.py -- n8n never re-implements the 3-day threshold itself, it only calls the same business rule the API already trusts. Single source of truth."
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "is-overdue",
+              "leftValue": "={{$json.is_payment_overdue}}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "if-overdue",
+      "name": "IF: actually overdue",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1060,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "options": {}
+      },
+      "id": "aggregate-overdue",
+      "name": "Aggregate all overdue",
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        1280,
+        220
+      ]
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{$env.NOTIFY_FROM_EMAIL || 'agent@digiart.local'}}",
+        "toEmail": "={{$env.NOTIFY_CM_EMAIL || 'cm@digiart.local'}}",
+        "subject": "=🚨 Retards de paiement detectes ({{$json.data.length}} leads)",
+        "text": "=Retards de paiement detectes ({{$json.data.length}} leads) : {{$json.data.map(l => l.fullname + ' (' + l.days_overdue + 'j)').join(', ')}}.\n\nRelances a valider dans l'interface avant envoi."
+      },
+      "id": "slack-notify-overdue",
+      "name": "Notify SDR: overdue list (email)",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        1500,
+        220
+      ]
+    }
+  ],
+  "connections": {
+    "Every hour": {
+      "main": [
+        [
+          {
+            "node": "GET /leads",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GET /leads": {
+      "main": [
+        [
+          {
+            "node": "Split leads",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split leads": {
+      "main": [
+        [
+          {
+            "node": "Filter: unpaid + pending",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter: unpaid + pending": {
+      "main": [
+        [
+          {
+            "node": "Re-check overdue rule via API",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Re-check overdue rule via API": {
+      "main": [
+        [
+          {
+            "node": "IF: actually overdue",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF: actually overdue": {
+      "main": [
+        [
+          {
+            "node": "Aggregate all overdue",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Aggregate all overdue": {
+      "main": [
+        [
+          {
+            "node": "Notify SDR: overdue list (email)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

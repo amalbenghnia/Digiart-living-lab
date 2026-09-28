@@ -1,0 +1,88 @@
+{
+  "name": "Reporting Agent: Daily Digest",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 8 * * *"
+            }
+          ]
+        }
+      },
+      "id": "e2f2c6a2-990a-4fb4-818f-a9514f7b6009",
+      "name": "Cron (Every day 8am)",
+      "type": "n8n-nodes-base.cron",
+      "typeVersion": 1,
+      "position": [
+        220,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "http://127.0.0.1:8000/reports/daily",
+        "options": {}
+      },
+      "id": "d243d99f-e3c3-4d64-9988-14227847cbe9",
+      "name": "API: /reports/daily",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        440,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "send",
+        "subject": "📊 Rapport Quotidien - Net-Info | {{ $json.report_generated_at }}",
+        "emailType": "text",
+        "message": "=📊 RAPPORT QUOTIDIEN - NET-INFO\n{{ $json.report_generated_at }}\n========================================\n\n📥 LEADS (GLOBAL)\n  • Total leads dans le système  : {{ $json.total_leads_all }}\n  • Nouveaux leads (24h)         : {{ $json.total_leads_24h }}\n\n🎯 RÉPARTITION PAR PRIORITÉ\n  • P0 (Urgents)                 : {{ $json.p0_leads_count }}\n  • P1 (Normaux)                 : {{ $json.p1_leads_count }}\n  • P2 (Faibles)                 : {{ $json.p2_leads_count }}\n  • Non scorés                   : {{ $json.unscored_leads_count }}\n\n📞 ACTIVITÉ COMMERCIALE\n  • Appelés aujourd'hui          : {{ $json.called_today }}\n  • Total leads appelés          : {{ $json.called_count }}\n  • Leads jamais appelés         : {{ $json.uncalled_count }}\n  • Temps de réponse moyen       : {{ $json.average_response_time_minutes ?? 'N/A' }} min\n\n💰 CONVERSIONS & PAIEMENTS\n  • Leads contactés              : {{ $json.contacted_count }}\n  • Inscriptions payées          : {{ $json.paid_count }}\n  • Paiements en attente         : {{ $json.payment_pending_count }}\n  • Taux de conversion           : {{ $json.conversion_rate_percent ?? 'N/A' }}%\n\n========================================\nRapport généré automatiquement par Reporting Agent\n",
+        "toList": [
+          "amalbenghnia@gmail.com"
+        ],
+        "options": {}
+      },
+      "id": "b21a3964-b816-4bc2-80ba-3b603eb152d1",
+      "name": "Gmail Send Report",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2,
+      "position": [
+        660,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "Cron (Every day 8am)": {
+      "main": [
+        [
+          {
+            "node": "API: /reports/daily",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "API: /reports/daily": {
+      "main": [
+        [
+          {
+            "node": "Gmail Send Report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

@@ -1,0 +1,109 @@
+# =============================================================================
+# DigiArt AI Management Hub — Stack Complète
+# =============================================================================
+# Commandes utiles :
+#   Démarrer tout      : docker compose up -d
+#   Voir les logs      : docker compose logs -f
+#   Arrêter tout       : docker compose down
+#   Redémarrer un service : docker compose restart n8n
+# =============================================================================
+
+services:
+
+  # ---------------------------------------------------------------------------
+  # 1. Lead Agent API (FastAPI + Python)
+  # ---------------------------------------------------------------------------
+  lead-agent:
+    build: .
+    container_name: lead-agent-api
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    environment:
+      # En Docker, Ollama et n8n tournent sur le réseau interne.
+      # On écrase les URLs "localhost" du .env par les noms de services Docker.
+      - OLLAMA_BASE_URL=http://ollama:11434
+      - N8N_WEBHOOK_BASE_URL=http://n8n:5678/webhook
+    volumes:
+      - ./credentials:/app/credentials:ro
+      - ./data:/app/data:ro
+      - ./static:/app/static:ro
+      - ./templates:/app/templates:ro
+      - ./dashboard:/app/dashboard:ro
+    depends_on:
+      ollama:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import httpx; httpx.get('http://localhost:8000/health').raise_for_status()"]
+      interval: 30s
+      timeout: 10s
+      start_period: 20s
+      retries: 5
+
+  # ---------------------------------------------------------------------------
+  # 2. Ollama (LLM Local — modèle Qwen2.5)
+  # ---------------------------------------------------------------------------
+  ollama:
+    image: ollama/ollama:latest
+    container_name: lead-agent-ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 30s
+      timeout: 10s
+      start_period: 60s
+      retries: 5
+
+  # ---------------------------------------------------------------------------
+  # 3. n8n (Automatisation — Workflows)
+  #    MOT DE PASSE FIXE : ne change jamais, même après redémarrage !
+  #    Identifiants : admin@digiart.local / DigiArt2025!
+  #    Interface : http://localhost:5678
+  # ---------------------------------------------------------------------------
+  n8n:
+    image: docker.n8n.io/n8nio/n8n:latest
+    container_name: lead-agent-n8n
+    ports:
+      - "5678:5678"
+    environment:
+      # --- Identifiants fixes (ne changent plus jamais) ---
+      - N8N_BASIC_AUTH_ACTIVE=true
+      - N8N_BASIC_AUTH_USER=admin@digiart.local
+      - N8N_BASIC_AUTH_PASSWORD=DigiArt2025!
+      # --- Configuration ---
+      - N8N_HOST=localhost
+      - N8N_PORT=5678
+      - N8N_PROTOCOL=http
+      - GENERIC_TIMEZONE=Africa/Tunis
+      - TZ=Africa/Tunis
+      # --- URLs de l'API Lead Agent (réseau interne Docker) ---
+      - LEAD_AGENT_URL=http://lead-agent:8000
+      # --- Emails de notification (à adapter) ---
+      - NOTIFY_CM_EMAIL=commercial@digiart.tn
+      - NOTIFY_FROM_EMAIL=agent@digiart.tn
+    volumes:
+      - n8n_data:/home/node/.n8n
+      # Import automatique des workflows au démarrage
+      - ./n8n/workflows:/home/node/.n8n/workflows-import:ro
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:5678/healthz"]
+      interval: 30s
+      timeout: 10s
+      start_period: 30s
+      retries: 3
+
+# =============================================================================
+# Volumes persistants (les données survivent aux redémarrages)
+# =============================================================================
+volumes:
+  ollama_data:
+    name: digiart-ollama-models
+  n8n_data:
+    name: digiart-n8n-data

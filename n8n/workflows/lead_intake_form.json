@@ -1,0 +1,139 @@
+{
+  "name": "Lead Intake Form",
+  "nodes": [
+    {
+      "parameters": {
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Nom et Pr\u00e9nom",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Email",
+              "fieldType": "email",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "T\u00e9l\u00e9phone",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Formation souhait\u00e9e",
+              "fieldType": "dropdown",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "Design and Deploy Multi-Agent AI Systems"
+                  },
+                  {
+                    "option": "Unreal Engine Fundamentals: From Zero to Playable Prototype"
+                  },
+                  {
+                    "option": "Fashion Design and Digital Simulation"
+                  },
+                  {
+                    "option": "XR Development: Virtual and Augmented Reality Systems"
+                  },
+                  {
+                    "option": "Autodesk Fusion for Product Innovation with Generative AI"
+                  }
+                ]
+              },
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Message (Optionnel)",
+              "fieldType": "textarea"
+            }
+          ]
+        },
+        "options": {},
+        "formTitle": "Inscription Formation DigiArt",
+        "formDescription": "Veuillez remplir vos informations pour vous pr\u00e9-inscrire \u00e0 l'une de nos formations."
+      },
+      "id": "form-trigger-node",
+      "name": "n8n Form Trigger",
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2,
+      "position": [
+        250,
+        300
+      ],
+      "webhookId": "digiart-lead-intake"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://127.0.0.1:8000/lead/new",
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={\n  \"fullname\": \"{{ $json['Nom et Pr\u00e9nom'] }}\",\n  \"email\": \"{{ $json.Email }}\",\n  \"phone\": \"{{ $json['T\u00e9l\u00e9phone'] }}\",\n  \"training\": \"{{ $json['Formation souhait\u00e9e'] }}\",\n  \"source\": \"website_form\",\n  \"raw_message\": \"{{ $json['Message (Optionnel)'] }}\"\n}",
+        "options": {}
+      },
+      "id": "create-lead-node",
+      "name": "Create Lead in Backend",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        480,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://127.0.0.1:8000/lead/analyse",
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={\n  \"lead_id\": \"{{ $json.id }}\"\n}",
+        "options": {}
+      },
+      "id": "analyse-lead-node",
+      "name": "Analyse Lead & Prioritize",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        700,
+        300
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "n8n Form Trigger": {
+      "main": [
+        [
+          {
+            "node": "Create Lead in Backend",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Lead in Backend": {
+      "main": [
+        [
+          {
+            "node": "Analyse Lead & Prioritize",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "f79e954a-a70e-43bd-a5dc-8798d1a10ff6",
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "id": "lead-intake-form",
+  "tags": []
+}

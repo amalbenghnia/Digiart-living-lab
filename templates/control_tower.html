@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>DigiArt AI Control Tower</title>
+  <style>
+    :root { --ink:#13233d; --muted:#657892; --line:#e2e8f0; --canvas:#f6f8fb; --card:#fff; --cyan:#009a8c; --blue:#246bfe; --red:#e11d48; --amber:#d97706; }
+    * { box-sizing:border-box; } body { margin:0; min-width:320px; background:var(--canvas); color:var(--ink); font-family:Inter,Arial,sans-serif; }
+    .shell { display:grid; grid-template-columns:276px 1fr; min-height:100vh; }
+    aside { background:#fff; border-right:1px solid var(--line); padding:26px 18px; }
+    .brand { display:flex; align-items:center; gap:12px; font-size:22px; font-weight:800; margin:3px 10px 42px; } .mark { display:grid; place-items:center; width:38px; height:38px; color:#fff; background:#102039; border-radius:8px; }
+    .group { color:#8aa0bf; font-size:12px; font-weight:800; letter-spacing:.8px; margin:25px 14px 10px; } nav a { display:block; color:#607593; text-decoration:none; padding:12px 14px; margin:3px 0; border-radius:7px; font-weight:600; } nav a.active { background:#eef3f9; color:var(--ink); }
+    main { min-width:0; } .topbar { height:78px; display:flex; justify-content:space-between; align-items:center; background:#fff; border-bottom:1px solid var(--line); padding:0 44px; } .search { width:300px; padding:12px 15px; background:#f3f6fa; color:#8a9ab0; border-radius:8px; } .sync { color:var(--muted); font-size:14px; }
+    .content { max-width:1460px; padding:38px 44px 60px; margin:auto; } h1 { font-size:30px; margin:0 0 8px; letter-spacing:0; } .subtitle { color:var(--muted); margin:0 0 28px; font-size:17px; }
+    .hero { background:#151d46; color:#fff; border-radius:8px; padding:28px 30px; display:flex; justify-content:space-between; gap:28px; align-items:center; } .hero h2 { margin:0 0 8px; font-size:21px; } .hero p { margin:0; color:#c8d4ef; line-height:1.5; max-width:700px; } .badge { background:#26336e; color:#73efd0; border:1px solid #42628e; padding:8px 12px; border-radius:18px; font-size:13px; font-weight:700; white-space:nowrap; }
+    .metrics, .agents, .integration-grid { display:grid; gap:16px; } .metrics { grid-template-columns:repeat(4, minmax(0,1fr)); margin:24px 0; } .agents { grid-template-columns:repeat(2, minmax(0,1fr)); } .integration-grid { grid-template-columns:repeat(3, minmax(0,1fr)); }
+    .card { background:var(--card); border:1px solid var(--line); border-radius:8px; padding:21px; } .metric-label, .label { font-size:12px; color:#8091aa; font-weight:800; letter-spacing:.5px; text-transform:uppercase; } .metric-value { margin-top:10px; font-size:31px; font-weight:800; } .section-title { margin:31px 0 14px; font-size:18px; }
+    .agent-header, .integration-header { display:flex; justify-content:space-between; gap:16px; align-items:start; } .agent-name { font-size:18px; font-weight:800; } .agent-detail, .integration-detail { margin:13px 0 0; color:var(--muted); line-height:1.5; font-size:14px; } .agent-metric { margin-top:21px; font-weight:800; font-size:22px; }
+    .status { padding:5px 9px; border-radius:12px; text-transform:uppercase; font-size:11px; font-weight:800; white-space:nowrap; } .ready { background:#dff8ef; color:#087d5d; } .attention { background:#fff4dc; color:#a25e00; } .waiting, .prototype, .configured, .contract_declared { background:#e8f0ff; color:#285dc1; } .not_configured, .needs_contract { background:#fee9ed; color:#bd2347; }
+    table { width:100%; border-collapse:collapse; background:#fff; border:1px solid var(--line); border-radius:8px; overflow:hidden; } th,td { text-align:left; padding:14px 17px; border-bottom:1px solid var(--line); font-size:14px; } th { color:#7387a4; font-size:12px; text-transform:uppercase; } tr:last-child td { border-bottom:0; } .empty { color:var(--muted); text-align:center; padding:27px; }
+    @media (max-width:900px) { .shell { grid-template-columns:1fr; } aside { display:none; } .content,.topbar { padding-left:20px; padding-right:20px; } .metrics,.integration-grid,.agents { grid-template-columns:1fr; } .hero { align-items:start; flex-direction:column; } .topbar .search { display:none; } }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <aside>
+      <div class="brand"><span class="mark">DA</span>DigiArt Hub</div>
+      <div class="group">STRATEGIC</div>
+      <nav><a href="/hub">PCM Dashboard</a><a href="/hub">Agenda / Cohorts</a><a href="/hub">Leads and SDR</a><a href="/hub">Pipeline</a><a class="active" href="/control-tower">AI Control Tower</a><a href="/hub">Reporting</a></nav>
+      <div class="group">WORKSPACE</div><nav><a href="/hub">Tasks</a><a href="/hub">Drive</a><a href="/hub">Chat</a></nav>
+    </aside>
+    <main>
+      <header class="topbar"><div class="search">Search missions, tasks...</div><div class="sync" id="updated">Loading operational data...</div></header>
+      <div class="content">
+        <section class="hero"><div><h2>AI Operations Control Tower</h2><p>One place to supervise the Lead Agent, SDR Copilot, Market Intelligence and Reporting. Automated recommendations stay visible, while commercial outreach and launch decisions remain human-controlled.</p></div><span class="badge">LIVE OPERATIONS</span></section>
+        <div class="metrics" id="metrics"></div>
+        <h2 class="section-title">Agent scorecard</h2><div class="agents" id="agents"></div>
+        <h2 class="section-title">Integration readiness</h2><div class="integration-grid" id="integrations"></div>
+        <h2 class="section-title">Human attention queue</h2><table><thead><tr><th>Type</th><th>Lead</th><th>Required action</th></tr></thead><tbody id="queue"></tbody></table>
+        <h2 class="section-title">Decision policy</h2><table><thead><tr><th>Area</th><th>Automated</th><th>Human control</th></tr></thead><tbody id="policy"></tbody></table>
+      </div>
+    </main>
+  </div>
+  <script>
+    const esc = (value) => String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
+    const status = (value) => `<span class="status ${esc(value)}">${esc(value).replace('_',' ')}</span>`;
+    const card = (label, value) => `<article class="card"><div class="metric-label">${esc(label)}</div><div class="metric-value">${esc(value)}</div></article>`;
+    async function load() {
+      const response = await fetch('/operations/control-tower');
+      if (!response.ok) throw new Error('Control tower data unavailable');
+      const data = await response.json();
+      const s = data.summary;
+      document.querySelector('#updated').textContent = `Updated ${new Date(data.generated_at).toLocaleString()}`;
+      document.querySelector('#metrics').innerHTML = [card('Active leads',s.active_leads),card('P0 SLA breaches',s.p0_sla_breaches),card('Payment follow-ups',s.payment_overdue),card('Follow-ups due',s.followups_due)].join('');
+      document.querySelector('#agents').innerHTML = data.agents.map(a => `<article class="card"><div class="agent-header"><div><div class="agent-name">${esc(a.name)}</div><div class="label" style="margin-top:8px">${esc(a.metric_label)}</div></div>${status(a.status)}</div><div class="agent-metric">${esc(a.metric_value)}</div><p class="agent-detail">${esc(a.detail)}</p></article>`).join('');
+      document.querySelector('#integrations').innerHTML = data.integrations.map(i => `<article class="card"><div class="integration-header"><strong>${esc(i.name)}</strong>${status(i.status)}</div><p class="integration-detail">${esc(i.detail)}</p></article>`).join('');
+      document.querySelector('#queue').innerHTML = data.attention_queue.length ? data.attention_queue.map(i => `<tr><td>${esc(i.type)}</td><td>${esc(i.lead_name)}</td><td>${esc(i.action)}</td></tr>`).join('') : '<tr><td colspan="3" class="empty">No urgent human action is waiting.</td></tr>';
+      document.querySelector('#policy').innerHTML = data.decision_policy.map(i => `<tr><td>${esc(i.area)}</td><td>${esc(i.automation)}</td><td>${esc(i.human_control)}</td></tr>`).join('');
+    }
+    load().catch(error => { document.querySelector('#updated').textContent = error.message; });
+  </script>
+</body>
+</html>

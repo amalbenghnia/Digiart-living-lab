@@ -1,0 +1,1276 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DigiArt AI Sales Hub</title>
+  <meta name="description" content="Tableau de bord de pilotage commercial IA — DigiArt Living Lab Hub" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    /* ═══════════════ RESET & TOKENS ═══════════════ */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg-base:    #f4f7f6;
+      --bg-card:    #ffffff;
+      --bg-card2:   #f8fafc;
+      --bg-hover:   #f1f5f9;
+      --border:     #e2e8f0;
+      --border-glow:rgba(99,102,241,0.15);
+
+      --accent:     #0f172a;
+      --accent-2:   #334155;
+      --accent-glow:rgba(15,23,42,0.1);
+
+      --p0:         #E3000F;
+      --p0-bg:      rgba(227,0,15,0.08);
+      --p1:         #F59E0B;
+      --p1-bg:      rgba(245,158,11,0.08);
+      --p2:         #3AB5B0;
+      --p2-bg:      rgba(58,181,176,0.08);
+
+      --green:      #10b981;
+      --green-bg:   rgba(16,185,129,0.08);
+      --red:        #E3000F;
+      --red-bg:     rgba(227,0,15,0.08);
+
+      --text-primary:   #0f172a;
+      --text-secondary: #64748b;
+      --text-muted:     #94a3b8;
+
+      --sidebar-w: 220px;
+      --transition: 0.2s cubic-bezier(0.4,0,0.2,1);
+    }
+
+    html, body { height: 100%; }
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg-base);
+      color: var(--text-primary);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    
+    /* ── Global Nav ─────────────────────────────────────────── */
+    .global-nav {
+      background: #111827;
+      border-bottom: 1px solid var(--border);
+      padding: 0 24px;
+      height: 48px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0;
+    }
+    .nav-links { display: flex; gap: 20px; height: 100%; }
+    .nav-links a {
+      color: #94a3b8;
+      text-decoration: none;
+      font-size: 0.85rem;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      padding: 0 12px;
+      border-bottom: 2px solid transparent;
+      transition: all 0.2s;
+    }
+    .nav-links a:hover { color: #fff; }
+    .nav-links a.active {
+      color: #fff;
+      border-bottom-color: #6366f1; /* Accent color */
+    }
+    .app-container {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    /* ═══════════════ SIDEBAR ═══════════════ */
+    .sidebar {
+      width: var(--sidebar-w);
+      min-height: 100vh;
+      background: var(--bg-card);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      flex-shrink: 0;
+      z-index: 10;
+    }
+
+    .sidebar-logo {
+      padding: 24px 20px 20px;
+      border-bottom: 1px solid var(--border);
+    }
+    .sidebar-logo .logo-badge {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .logo-icon {
+      width: 36px; height: 36px;
+      background: linear-gradient(135deg, var(--accent), var(--accent-2));
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px;
+      flex-shrink: 0;
+    }
+    .logo-text { font-size: 13px; font-weight: 700; letter-spacing: 0.01em; line-height: 1.3; }
+    .logo-text span { display: block; color: var(--text-secondary); font-weight: 400; font-size: 11px; }
+
+    .nav { padding: 12px 10px; flex: 1; }
+    .nav-section-label {
+      font-size: 10px; font-weight: 600; letter-spacing: 0.08em;
+      color: var(--text-muted); text-transform: uppercase;
+      padding: 8px 10px 4px;
+    }
+    .nav-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 12px; border-radius: 10px;
+      cursor: pointer; transition: all var(--transition);
+      font-size: 13.5px; font-weight: 500; color: var(--text-secondary);
+      margin-bottom: 2px; border: 1px solid transparent;
+    }
+    .nav-item:hover { background: var(--bg-hover); color: var(--text-primary); }
+    .nav-item.active {
+      background: var(--accent-glow);
+      color: var(--text-primary);
+      border-color: var(--border-glow);
+    }
+    .nav-item .icon { font-size: 16px; width: 20px; text-align: center; }
+    .nav-badge {
+      margin-left: auto; font-size: 11px; font-weight: 700;
+      background: var(--p0); color: #fff;
+      padding: 1px 7px; border-radius: 20px;
+    }
+
+    .sidebar-footer {
+      padding: 16px 20px;
+      border-top: 1px solid var(--border);
+    }
+    .health-dot {
+      display: flex; align-items: center; gap: 8px;
+      font-size: 12px; color: var(--text-secondary);
+    }
+    .dot { width: 8px; height: 8px; border-radius: 50%; animation: pulse 2s infinite; }
+    .dot.green { background: var(--green); }
+    .dot.red   { background: var(--red); }
+    .dot.grey  { background: var(--text-muted); animation: none; }
+    @keyframes pulse {
+      0%,100% { opacity: 1; }
+      50%      { opacity: 0.4; }
+    }
+
+    /* ═══════════════ MAIN ═══════════════ */
+    .main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .topbar {
+      background: var(--bg-card);
+      border-bottom: 1px solid var(--border);
+      padding: 14px 28px;
+      display: flex; align-items: center; gap: 16px;
+      flex-shrink: 0;
+    }
+    .page-title { font-size: 18px; font-weight: 700; flex: 1; }
+    .page-title span { color: var(--text-secondary); font-weight: 400; font-size: 14px; margin-left: 8px; }
+    .refresh-btn {
+      padding: 8px 16px; border-radius: 8px;
+      background: var(--accent-glow); border: 1px solid var(--border-glow);
+      color: var(--accent); font-size: 13px; font-weight: 600;
+      cursor: pointer; transition: all var(--transition); font-family: inherit;
+    }
+    .refresh-btn:hover { background: var(--accent); color: #fff; }
+    .last-update { font-size: 12px; color: var(--text-muted); }
+
+    .content {
+      flex: 1; overflow-y: auto; padding: 24px 28px;
+      display: flex; flex-direction: column; gap: 24px;
+    }
+
+    /* ═══════════════ CARDS & KPI ═══════════════ */
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 16px;
+    }
+    .kpi-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 20px;
+      transition: all var(--transition);
+      position: relative;
+      overflow: hidden;
+    }
+    .kpi-card::before {
+      content: '';
+      position: absolute; top: 0; left: 0; right: 0; height: 3px;
+      border-radius: 14px 14px 0 0;
+    }
+    .kpi-card.accent::before { background: linear-gradient(90deg, var(--accent), var(--accent-2)); }
+    .kpi-card.danger::before { background: var(--p0); }
+    .kpi-card.warning::before { background: var(--p1); }
+    .kpi-card.success::before { background: var(--green); }
+    .kpi-card.info::before    { background: var(--p2); }
+    .kpi-card:hover { border-color: var(--border-glow); transform: translateY(-2px); }
+
+    .kpi-label { font-size: 12px; font-weight: 500; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.06em; }
+    .kpi-value { font-size: 32px; font-weight: 800; margin: 6px 0 2px; line-height: 1; }
+    .kpi-value.danger  { color: var(--p0); }
+    .kpi-value.warning { color: var(--p1); }
+    .kpi-value.success { color: var(--green); }
+    .kpi-value.info    { color: var(--p2); }
+    .kpi-sub { font-size: 12px; color: var(--text-muted); }
+    .kpi-icon { position: absolute; right: 16px; top: 16px; font-size: 28px; opacity: 0.15; }
+
+    /* ═══════════════ SECTION HEADERS ═══════════════ */
+    .section-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 12px;
+    }
+    .section-title { font-size: 15px; font-weight: 700; }
+    .section-action {
+      font-size: 12px; color: var(--accent); cursor: pointer;
+      background: none; border: none; font-family: inherit; font-weight: 600;
+    }
+    .section-action:hover { text-decoration: underline; }
+
+    /* ═══════════════ LEADS TABLE ═══════════════ */
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      overflow: hidden;
+    }
+
+    .filters {
+      display: flex; gap: 8px; padding: 14px 16px;
+      border-bottom: 1px solid var(--border); flex-wrap: wrap;
+    }
+    .filter-btn {
+      padding: 5px 14px; border-radius: 20px; font-size: 12px; font-weight: 600;
+      cursor: pointer; border: 1px solid var(--border);
+      background: transparent; color: var(--text-secondary);
+      transition: all var(--transition); font-family: inherit;
+    }
+    .filter-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .filter-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+    .search-input {
+      padding: 5px 14px; border-radius: 20px; font-size: 12px;
+      background: var(--bg-card2); border: 1px solid var(--border);
+      color: var(--text-primary); font-family: inherit;
+      margin-left: auto; width: 200px;
+      transition: all var(--transition);
+    }
+    .search-input:focus { outline: none; border-color: var(--accent); }
+    .search-input::placeholder { color: var(--text-muted); }
+
+    table { width: 100%; border-collapse: collapse; }
+    thead th {
+      padding: 12px 16px; text-align: left;
+      font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase;
+      color: var(--text-muted); background: var(--bg-card2);
+      border-bottom: 1px solid var(--border);
+    }
+    tbody tr {
+      border-bottom: 1px solid var(--border);
+      transition: background var(--transition);
+      cursor: pointer;
+    }
+    tbody tr:last-child { border-bottom: none; }
+    tbody tr:hover { background: var(--bg-hover); }
+    tbody td { padding: 13px 16px; font-size: 13.5px; }
+
+    .badge {
+      display: inline-flex; align-items: center;
+      padding: 3px 10px; border-radius: 20px;
+      font-size: 11px; font-weight: 700; letter-spacing: 0.04em;
+    }
+    .badge.p0 { background: var(--p0-bg); color: var(--p0); border: 1px solid rgba(239,68,68,0.3); }
+    .badge.p1 { background: var(--p1-bg); color: var(--p1); border: 1px solid rgba(245,158,11,0.3); }
+    .badge.p2 { background: var(--p2-bg); color: var(--p2); border: 1px solid rgba(59,130,246,0.3); }
+    .badge.unscored { background: rgba(100,116,139,0.12); color: #64748b; border: 1px solid rgba(100,116,139,0.3); }
+    .badge.green { background: var(--green-bg); color: var(--green); border: 1px solid rgba(16,185,129,0.3); }
+    .badge.red   { background: var(--red-bg);   color: var(--red);   border: 1px solid rgba(239,68,68,0.3); }
+
+    .lead-name { font-weight: 600; }
+    .lead-sub  { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+
+    .called-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 6px; }
+
+    /* ═══════════════ TWO COLUMN GRID ═══════════════ */
+    .two-col { display: grid; grid-template-columns: 1fr 320px; gap: 16px; }
+    @media (max-width: 1100px) { .two-col { grid-template-columns: 1fr; } }
+
+    /* ═══════════════ ACTIVITY FEED ═══════════════ */
+    .activity-feed { display: flex; flex-direction: column; gap: 0; }
+    .activity-item {
+      display: flex; gap: 12px; padding: 12px 20px;
+      border-bottom: 1px solid var(--border);
+      transition: background var(--transition);
+    }
+    .activity-item:last-child { border-bottom: none; }
+    .activity-item:hover { background: var(--bg-hover); }
+    .activity-dot-wrap { display: flex; flex-direction: column; align-items: center; gap: 0; }
+    .activity-dot-big {
+      width: 32px; height: 32px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 14px; flex-shrink: 0;
+    }
+    .activity-line {
+      width: 2px; background: var(--border); flex: 1;
+      margin-top: 4px;
+    }
+    .activity-item:last-child .activity-line { display: none; }
+    .activity-body { flex: 1; padding-top: 4px; }
+    .activity-title { font-size: 13px; font-weight: 600; }
+    .activity-sub { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+    .activity-time { font-size: 11px; color: var(--text-muted); white-space: nowrap; padding-top: 4px; }
+
+    /* ═══════════════ REPORTS PAGE ═══════════════ */
+    .report-grid {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;
+    }
+    .report-item {
+      background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px;
+      padding: 16px;
+    }
+    .report-item-label { font-size: 12px; color: var(--text-secondary); }
+    .report-item-value { font-size: 22px; font-weight: 800; margin-top: 4px; }
+    .report-sources { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
+    .source-row { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+    .source-bar-wrap { flex: 1; height: 6px; background: var(--bg-card2); border-radius: 10px; overflow: hidden; }
+    .source-bar { height: 100%; border-radius: 10px; background: linear-gradient(90deg, var(--accent), var(--accent-2)); }
+
+    /* ═══════════════ SYSTEM HEALTH PAGE ═══════════════ */
+    .health-grid { display: flex; flex-direction: column; gap: 8px; }
+    .health-row {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 14px 20px; background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: 12px; transition: all var(--transition);
+    }
+    .health-row:hover { border-color: var(--border-glow); }
+    .health-service { display: flex; align-items: center; gap: 12px; }
+    .health-icon { font-size: 20px; }
+    .health-name { font-weight: 600; font-size: 14px; }
+    .health-detail { font-size: 12px; color: var(--text-muted); }
+    .health-status { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; }
+    .status-online  { color: var(--green); }
+    .status-offline { color: var(--red); }
+    .status-checking { color: var(--p1); }
+    .llm-bar { margin-top: 4px; width: 100px; height: 4px; background: var(--bg-card2); border-radius: 10px; overflow: hidden; }
+    .llm-bar-fill { height: 100%; border-radius: 10px; background: linear-gradient(90deg, var(--green), var(--p1)); }
+
+    /* ═══════════════ LEAD DETAIL MODAL ═══════════════ */
+    .modal-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.7);
+      z-index: 100; display: none; align-items: center; justify-content: center;
+      backdrop-filter: blur(4px);
+    }
+    .modal-overlay.open { display: flex; }
+    .modal {
+      background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: 18px; width: 680px; max-width: 95vw; max-height: 85vh;
+      overflow-y: auto; padding: 28px;
+      animation: slideIn 0.25s ease;
+    }
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateY(20px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .modal-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 20px; }
+    .modal-close { background: none; border: none; color: var(--text-muted); font-size: 22px; cursor: pointer; line-height: 1; }
+    .modal-close:hover { color: var(--text-primary); }
+    .modal-section { margin-bottom: 20px; }
+    .modal-section-title {
+      font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
+      color: var(--text-muted); margin-bottom: 10px;
+      padding-bottom: 8px; border-bottom: 1px solid var(--border);
+    }
+    .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .info-item { }
+    .info-label { font-size: 11px; color: var(--text-muted); font-weight: 500; }
+    .info-value { font-size: 14px; font-weight: 600; margin-top: 2px; }
+    .brief-box {
+      background: var(--bg-card2); border: 1px solid var(--border);
+      border-radius: 10px; padding: 14px; font-size: 13px; color: var(--text-secondary);
+      white-space: pre-wrap; line-height: 1.6; margin-top: 6px;
+      max-height: 180px; overflow-y: auto;
+    }
+    .timeline { display: flex; flex-direction: column; gap: 10px; }
+    .tl-item { display: flex; gap: 10px; align-items: flex-start; }
+    .tl-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--accent); margin-top: 4px; flex-shrink: 0; }
+    .tl-content { }
+    .tl-label { font-size: 13px; font-weight: 500; }
+    .tl-time  { font-size: 11px; color: var(--text-muted); margin-top: 1px; }
+
+    /* ═══════════════ PAGES ═══════════════ */
+    .page { display: none; flex-direction: column; gap: 20px; }
+    .page.active { display: flex; }
+
+    /* ═══════════════ EMPTY STATE ═══════════════ */
+    .empty {
+      text-align: center; padding: 60px; color: var(--text-muted);
+    }
+    .empty .empty-icon { font-size: 48px; margin-bottom: 12px; }
+    .empty p { font-size: 14px; }
+
+    /* ═══════════════ LOADING ═══════════════ */
+    .spinner {
+      width: 32px; height: 32px; border: 3px solid var(--border);
+      border-top-color: var(--accent); border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin: 40px auto;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ═══════════════ SCROLLBAR ═══════════════ */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+  </style>
+</head>
+<body>
+
+<!-- ── Global Nav ─────────────────────────────────────────────────────── -->
+<nav class="global-nav">
+  <div class="nav-links">
+    <a href="/hub">🏢 AI Management Hub</a>
+    <a href="/dashboard/index.html" class="active">💼 SDR Copilot Dashboard</a>
+  </div>
+</nav>
+<div class="app-container">
+
+<!-- ═══════════════════════ SIDEBAR ═══════════════════════ -->
+<aside class="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-badge">
+      <div class="logo-icon">🤖</div>
+      <div class="logo-text">
+        DigiArt AI Hub
+        <span>Sales Intelligence</span>
+      </div>
+    </div>
+  </div>
+
+  <nav class="nav">
+    <div class="nav-section-label">Navigation</div>
+    <div class="nav-item active" onclick="navigate('dashboard')" id="nav-dashboard">
+      <span class="icon">📊</span> Dashboard
+    </div>
+    <div class="nav-item" onclick="navigate('leads')" id="nav-leads">
+      <span class="icon">👥</span> Leads
+      <span class="nav-badge" id="nav-p0-count">…</span>
+    </div>
+    <div class="nav-item" onclick="navigate('sdr')" id="nav-sdr">
+      <span class="icon">🎯</span> SDR Copilot
+    </div>
+    <div class="nav-item" onclick="navigate('reports')" id="nav-reports">
+      <span class="icon">📈</span> Reports
+    </div>
+    <div class="nav-section-label" style="margin-top:12px">Système</div>
+    <div class="nav-item" onclick="navigate('health')" id="nav-health">
+      <span class="icon">🔧</span> System Health
+    </div>
+  </nav>
+
+  <div class="sidebar-footer">
+    <div class="health-dot">
+      <div class="dot green" id="sidebar-api-dot"></div>
+      <span id="sidebar-api-label">FastAPI · vérifie...</span>
+    </div>
+  </div>
+</aside>
+
+<!-- ═══════════════════════ MAIN ═══════════════════════ -->
+<main class="main">
+  <div class="topbar">
+    <div class="page-title" id="page-title">
+      Dashboard <span id="page-subtitle">Vue globale du système</span>
+    </div>
+    <span class="last-update" id="last-update"></span>
+    <button class="refresh-btn" onclick="refreshAll()">↻ Actualiser</button>
+  </div>
+
+  <div class="content">
+
+    <!-- ══════════ PAGE : DASHBOARD ══════════ -->
+    <div class="page active" id="page-dashboard">
+      <div class="kpi-grid">
+        <div class="kpi-card accent">
+          <div class="kpi-icon">🧑‍💼</div>
+          <div class="kpi-label">Total Leads</div>
+          <div class="kpi-value" id="kpi-total">…</div>
+          <div class="kpi-sub" id="kpi-new-24h">chargement…</div>
+        </div>
+        <div class="kpi-card danger">
+          <div class="kpi-icon">🔥</div>
+          <div class="kpi-label">P0 Urgents</div>
+          <div class="kpi-value danger" id="kpi-p0">…</div>
+          <div class="kpi-sub">à appeler dans les 2h</div>
+        </div>
+        <div class="kpi-card warning">
+          <div class="kpi-icon">📞</div>
+          <div class="kpi-label">Jamais Appelés</div>
+          <div class="kpi-value warning" id="kpi-uncalled">…</div>
+          <div class="kpi-sub" id="kpi-called-today">chargement…</div>
+        </div>
+        <div class="kpi-card success">
+          <div class="kpi-icon">💰</div>
+          <div class="kpi-label">Taux Conversion</div>
+          <div class="kpi-value success" id="kpi-conversion">…</div>
+          <div class="kpi-sub" id="kpi-paid">chargement…</div>
+        </div>
+        <div class="kpi-card info">
+          <div class="kpi-icon">🤖</div>
+          <div class="kpi-label">LLM Calls / heure</div>
+          <div class="kpi-value info" id="kpi-llm">…</div>
+          <div class="kpi-sub" id="kpi-llm-quota">quota : …</div>
+        </div>
+        <div class="kpi-card warning">
+          <div class="kpi-icon">⏳</div>
+          <div class="kpi-label">Paiements en attente</div>
+          <div class="kpi-value warning" id="kpi-pending">…</div>
+          <div class="kpi-sub" id="kpi-response-time">temps réponse : …</div>
+        </div>
+      </div>
+
+      <div class="two-col">
+        <!-- Leads récents -->
+        <div>
+          <div class="section-header">
+            <div class="section-title">Leads récents</div>
+            <button class="section-action" onclick="navigate('leads')">Voir tous →</button>
+          </div>
+          <div class="card">
+            <table>
+              <thead>
+                <tr>
+                  <th>Prospect</th>
+                  <th>Formation</th>
+                  <th>Priorité</th>
+                  <th>Statut</th>
+                  <th>Appelé</th>
+                </tr>
+              </thead>
+              <tbody id="dashboard-leads-body">
+                <tr><td colspan="5"><div class="spinner"></div></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Activité récente -->
+        <div>
+          <div class="section-header">
+            <div class="section-title">Activité récente</div>
+          </div>
+          <div class="card">
+            <div class="activity-feed" id="activity-feed">
+              <div class="spinner"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Répartition par source / formation -->
+      <div>
+        <div class="section-header"><div class="section-title">Répartition par source</div></div>
+        <div class="card" style="padding: 16px 20px;">
+          <div id="source-bars"><div class="spinner"></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════ PAGE : LEADS ══════════ -->
+    <div class="page" id="page-leads">
+      <div class="card">
+        <div class="filters">
+          <button class="filter-btn active" onclick="filterLeads('all', this)">Tous</button>
+          <button class="filter-btn" onclick="filterLeads('P0', this)">🔥 P0</button>
+          <button class="filter-btn" onclick="filterLeads('P1', this)">⚡ P1</button>
+          <button class="filter-btn" onclick="filterLeads('P2', this)">💧 P2</button>
+          <button class="filter-btn" onclick="filterLeads('uncalled', this)">📵 Non appelés</button>
+          <input class="search-input" type="text" placeholder="🔍 Rechercher..." oninput="searchLeads(this.value)" />
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>Prospect</th>
+              <th>Formation</th>
+              <th>Source</th>
+              <th>Priorité</th>
+              <th>Score</th>
+              <th>Statut</th>
+              <th>Appelé</th>
+              <th>Créé le</th>
+            </tr>
+          </thead>
+          <tbody id="leads-body">
+            <tr><td colspan="8"><div class="spinner"></div></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ══════════ PAGE : SDR COPILOT ══════════ -->
+    <div class="page" id="page-sdr">
+      <div class="two-col">
+        <div>
+          <div class="section-header"><div class="section-title">Générer un Brief SDR</div></div>
+          <div class="card" style="padding: 20px;">
+            <label style="font-size:12px;color:var(--text-muted);font-weight:600;">Lead ID</label>
+            <div style="display:flex;gap:8px;margin-top:6px;margin-bottom:16px;">
+              <input id="sdr-lead-id" type="text" placeholder="ID du lead (ex: uuid-xxxx)"
+                style="flex:1;padding:10px 14px;border-radius:8px;border:1px solid var(--border);background:var(--bg-card2);color:var(--text-primary);font-family:inherit;font-size:13px;">
+              <button onclick="generateBrief()" id="sdr-brief-btn"
+                style="padding:10px 18px;border-radius:8px;background:linear-gradient(135deg,var(--accent),var(--accent-2));border:none;color:#fff;font-weight:700;font-size:13px;cursor:pointer;font-family:inherit;transition:opacity 0.2s;">
+                Générer ⚡
+              </button>
+            </div>
+            <div id="brief-result" style="display:none;">
+              <div style="font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-muted);margin-bottom:8px;">Résumé Prospect</div>
+              <div class="brief-box" id="brief-summary"></div>
+              <div style="font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-muted);margin:14px 0 8px;">Accroche Suggérée</div>
+              <div class="brief-box" id="brief-pitch"></div>
+              <div style="font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-muted);margin:14px 0 8px;">Objections Prédites</div>
+              <div class="brief-box" id="brief-objections"></div>
+              <div style="font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-muted);margin:14px 0 8px;">Brouillon Email</div>
+              <div class="brief-box" id="brief-email"></div>
+            </div>
+            <div id="brief-loading" style="display:none;text-align:center;padding:20px;color:var(--text-muted);font-size:13px;">
+              ⏳ L'IA génère le brief… (peut prendre 15-30s avec Ollama)
+            </div>
+            <div id="brief-error" style="display:none;padding:12px;border-radius:8px;background:var(--red-bg);color:var(--red);font-size:13px;"></div>
+          </div>
+        </div>
+
+        <div>
+          <div class="section-header"><div class="section-title">Traiter l'Issue d'Appel</div></div>
+          <div class="card" style="padding: 20px;">
+            <label style="font-size:12px;color:var(--text-muted);font-weight:600;">Lead ID</label>
+            <input id="outcome-lead-id" type="text" placeholder="ID du lead"
+              style="width:100%;padding:10px 14px;border-radius:8px;border:1px solid var(--border);background:var(--bg-card2);color:var(--text-primary);font-family:inherit;font-size:13px;margin-top:6px;margin-bottom:12px;">
+
+            <label style="font-size:12px;color:var(--text-muted);font-weight:600;">Issue de l'Appel</label>
+            <select id="outcome-issue"
+              style="width:100%;padding:10px 14px;border-radius:8px;border:1px solid var(--border);background:var(--bg-card2);color:var(--text-primary);font-family:inherit;font-size:13px;margin-top:6px;margin-bottom:12px;">
+              <option value="">-- Choisir --</option>
+              <option value="interested">interested — Intéressé</option>
+              <option value="very_interested">very_interested — Très intéressé</option>
+              <option value="need_time">need_time — Veut réfléchir</option>
+              <option value="call_later">call_later — Rappeler plus tard</option>
+              <option value="no_answer">no_answer — Pas de réponse</option>
+              <option value="wrong_number">wrong_number — Mauvais numéro</option>
+              <option value="not_interested">not_interested — Non intéressé</option>
+              <option value="payment_pending">payment_pending — Paiement en cours</option>
+            </select>
+
+            <label style="font-size:12px;color:var(--text-muted);font-weight:600;">Notes de l'appel</label>
+            <textarea id="outcome-notes" placeholder="Résumé de ce qui a été dit..."
+              style="width:100%;padding:10px 14px;border-radius:8px;border:1px solid var(--border);background:var(--bg-card2);color:var(--text-primary);font-family:inherit;font-size:13px;margin-top:6px;margin-bottom:12px;height:80px;resize:vertical;"></textarea>
+
+            <button onclick="processOutcome()" id="outcome-btn"
+              style="width:100%;padding:11px;border-radius:8px;background:linear-gradient(135deg,var(--green),#059669);border:none;color:#fff;font-weight:700;font-size:13px;cursor:pointer;font-family:inherit;">
+              Traiter le Résultat ✓
+            </button>
+            <div id="outcome-result" style="display:none;margin-top:16px;padding:14px;border-radius:10px;background:var(--green-bg);border:1px solid rgba(16,185,129,0.3);">
+              <div style="font-weight:700;color:var(--green);margin-bottom:8px;">✅ Traitement réussi</div>
+              <div id="outcome-summary" style="font-size:13px;color:var(--text-secondary);"></div>
+            </div>
+            <div id="outcome-error" style="display:none;margin-top:12px;padding:12px;border-radius:8px;background:var(--red-bg);color:var(--red);font-size:13px;"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════ PAGE : REPORTS ══════════ -->
+    <div class="page" id="page-reports">
+      <div class="kpi-grid">
+        <div class="kpi-card accent">
+          <div class="kpi-label">Total Leads</div>
+          <div class="kpi-value" id="r-total">…</div>
+          <div class="kpi-sub" id="r-new24">chargement…</div>
+        </div>
+        <div class="kpi-card danger">
+          <div class="kpi-label">P0 Urgents</div>
+          <div class="kpi-value danger" id="r-p0">…</div>
+        </div>
+        <div class="kpi-card warning">
+          <div class="kpi-label">P1 Normaux</div>
+          <div class="kpi-value warning" id="r-p1">…</div>
+        </div>
+        <div class="kpi-card info">
+          <div class="kpi-label">P2 Faibles</div>
+          <div class="kpi-value info" id="r-p2">…</div>
+        </div>
+        <div class="kpi-card success">
+          <div class="kpi-label">Conversion</div>
+          <div class="kpi-value success" id="r-conv">…</div>
+        </div>
+        <div class="kpi-card warning">
+          <div class="kpi-label">Paiements en attente</div>
+          <div class="kpi-value warning" id="r-pending">…</div>
+        </div>
+      </div>
+
+      <div class="two-col">
+        <div>
+          <div class="section-header"><div class="section-title">Répartition par Source</div></div>
+          <div class="card" style="padding:20px;">
+            <div id="r-sources" class="report-sources"><div class="spinner"></div></div>
+          </div>
+          <div class="section-header" style="margin-top:16px;"><div class="section-title">Répartition par Formation</div></div>
+          <div class="card" style="padding:20px;">
+            <div id="r-trainings" class="report-sources"><div class="spinner"></div></div>
+          </div>
+        </div>
+        <div>
+          <div class="section-header"><div class="section-title">Activité Commerciale</div></div>
+          <div class="card" style="padding:20px;">
+            <div style="display:flex;flex-direction:column;gap:14px;" id="r-activity">
+              <div class="spinner"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════ PAGE : SYSTEM HEALTH ══════════ -->
+    <div class="page" id="page-health">
+      <div class="section-header"><div class="section-title">État des Services</div></div>
+      <div class="health-grid" id="health-grid">
+        <div class="spinner"></div>
+      </div>
+    </div>
+
+  </div><!-- /content -->
+</main>
+
+<!-- ═══════════════════════ LEAD MODAL ═══════════════════════ -->
+<div class="modal-overlay" id="lead-modal" onclick="closeModal(event)">
+  <div class="modal" id="modal-content">
+    <div class="modal-header">
+      <div>
+        <h2 id="modal-name" style="font-size:20px;font-weight:800;"></h2>
+        <div id="modal-meta" style="color:var(--text-muted);font-size:13px;margin-top:4px;"></div>
+      </div>
+      <button class="modal-close" onclick="closeLeadModal()">✕</button>
+    </div>
+
+    <div class="modal-section">
+      <div class="modal-section-title">Informations</div>
+      <div class="info-grid">
+        <div class="info-item"><div class="info-label">Téléphone</div><div class="info-value" id="modal-phone">—</div></div>
+        <div class="info-item"><div class="info-label">Email</div><div class="info-value" id="modal-email">—</div></div>
+        <div class="info-item"><div class="info-label">Formation</div><div class="info-value" id="modal-training">—</div></div>
+        <div class="info-item"><div class="info-label">Source</div><div class="info-value" id="modal-source">—</div></div>
+        <div class="info-item"><div class="info-label">Priorité</div><div class="info-value" id="modal-priority">—</div></div>
+        <div class="info-item"><div class="info-label">Score IA</div><div class="info-value" id="modal-score">—</div></div>
+        <div class="info-item"><div class="info-label">Statut</div><div class="info-value" id="modal-status">—</div></div>
+        <div class="info-item"><div class="info-label">Paiement</div><div class="info-value" id="modal-payment">—</div></div>
+      </div>
+    </div>
+
+    <div class="modal-section">
+      <div class="modal-section-title">Appel Commercial</div>
+      <div class="info-grid">
+        <div class="info-item"><div class="info-label">Appelé</div><div class="info-value" id="modal-called">—</div></div>
+        <div class="info-item"><div class="info-label">Date d'appel</div><div class="info-value" id="modal-called-at">—</div></div>
+        <div class="info-item"><div class="info-label">Appelé par</div><div class="info-value" id="modal-called-by">—</div></div>
+        <div class="info-item"><div class="info-label">Action suivante</div><div class="info-value" id="modal-next-action">—</div></div>
+      </div>
+    </div>
+
+    <div class="modal-section" id="modal-notes-section" style="display:none">
+      <div class="modal-section-title">Notes</div>
+      <div class="brief-box" id="modal-notes"></div>
+    </div>
+
+    <div class="modal-section">
+      <div class="modal-section-title">Timeline</div>
+      <div class="timeline" id="modal-timeline"></div>
+    </div>
+
+    <div style="display:flex;gap:8px;margin-top:16px;">
+      <button onclick="useInSDR()" id="modal-sdr-btn"
+        style="flex:1;padding:10px;border-radius:8px;background:linear-gradient(135deg,var(--accent),var(--accent-2));border:none;color:#fff;font-weight:700;font-size:13px;cursor:pointer;font-family:inherit;">
+        🎯 Ouvrir dans SDR Copilot
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════ JAVASCRIPT ═══════════════════════ -->
+<script>
+const API = 'http://127.0.0.1:8000';
+let allLeads = [];
+let currentFilter = 'all';
+let currentSearch = '';
+let selectedLead = null;
+
+// ══════════ NAVIGATION ══════════
+function navigate(page) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('page-' + page).classList.add('active');
+  document.getElementById('nav-' + page).classList.add('active');
+
+  const titles = {
+    dashboard: ['Dashboard', 'Vue globale du système'],
+    leads:     ['Leads', 'Gestion des prospects'],
+    sdr:       ['SDR Copilot', 'Préparation et suivi des appels'],
+    reports:   ['Reports', 'KPIs et performance commerciale'],
+    health:    ['System Health', 'État des services'],
+  };
+  document.getElementById('page-title').textContent = titles[page][0];
+  document.getElementById('page-subtitle').textContent = titles[page][1];
+
+  if (page === 'leads') renderLeadsTable();
+}
+
+// ══════════ FETCH HELPERS ══════════
+async function api(path, opts = {}) {
+  const res = await fetch(API + path, {
+    headers: { 'Content-Type': 'application/json' },
+    ...opts
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
+// ══════════ REFRESH ALL ══════════
+async function refreshAll() {
+  updateTimestamp();
+  await Promise.allSettled([loadDashboard(), loadLeads(), loadReports(), loadHealth()]);
+}
+
+function updateTimestamp() {
+  document.getElementById('last-update').textContent =
+    'Mis à jour : ' + new Date().toLocaleTimeString('fr-FR');
+}
+
+// ══════════ LOAD DASHBOARD ══════════
+async function loadDashboard() {
+  try {
+    const [dash, report] = await Promise.all([
+      api('/dashboard'),
+      api('/reports/daily')
+    ]);
+
+    document.getElementById('kpi-total').textContent = report.total_leads_all ?? dash.total_leads;
+    document.getElementById('kpi-new-24h').textContent = `+${report.total_leads_24h ?? 0} nouveaux (24h)`;
+    document.getElementById('kpi-p0').textContent = report.p0_leads_count ?? dash.p0_leads;
+    document.getElementById('kpi-uncalled').textContent = report.uncalled_count ?? '—';
+    document.getElementById('kpi-called-today').textContent = `${report.called_today ?? 0} appelés aujourd'hui`;
+    document.getElementById('kpi-conversion').textContent =
+      report.conversion_rate_percent != null ? report.conversion_rate_percent + '%' : 'N/A';
+    document.getElementById('kpi-paid').textContent = `${report.paid_count ?? 0} inscrits payés`;
+    document.getElementById('kpi-llm').textContent = `${dash.llm_calls_this_hour}/${dash.llm_hourly_quota}`;
+    document.getElementById('kpi-llm-quota').textContent = `quota horaire : ${dash.llm_hourly_quota}`;
+    document.getElementById('kpi-pending').textContent = report.payment_pending_count ?? '—';
+    const avg = report.average_response_time_minutes;
+    document.getElementById('kpi-response-time').textContent = avg ? `⏱ rép. moy. : ${avg} min` : '';
+
+    // nav badge
+    document.getElementById('nav-p0-count').textContent = report.p0_leads_count ?? dash.p0_leads;
+
+    // source bars
+    buildSourceBars(report.leads_by_source ?? {}, 'source-bars');
+
+    checkSidebarHealth();
+  } catch(e) {
+    console.error('Dashboard error:', e);
+  }
+}
+
+function buildSourceBars(obj, containerId) {
+  const container = document.getElementById(containerId);
+  if (!obj || !Object.keys(obj).length) {
+    container.innerHTML = '<p style="color:var(--text-muted);font-size:13px;">Aucune donnée</p>';
+    return;
+  }
+  const total = Object.values(obj).reduce((a, b) => a + b, 0);
+  const sorted = Object.entries(obj).sort((a, b) => b[1] - a[1]);
+  container.innerHTML = sorted.map(([src, cnt]) => `
+    <div class="source-row">
+      <span style="min-width:90px;font-size:12px;color:var(--text-secondary);">${src}</span>
+      <div class="source-bar-wrap">
+        <div class="source-bar" style="width:${Math.round(cnt/total*100)}%"></div>
+      </div>
+      <span style="min-width:30px;text-align:right;font-size:12px;font-weight:700;">${cnt}</span>
+    </div>
+  `).join('');
+}
+
+// ══════════ LOAD LEADS ══════════
+async function loadLeads() {
+  try {
+    const data = await api('/leads?sort_by=priority');
+    allLeads = data.leads || [];
+    renderDashboardLeads();
+    renderLeadsTable();
+    buildActivityFeed();
+  } catch(e) {
+    document.getElementById('dashboard-leads-body').innerHTML =
+      `<tr><td colspan="5" style="text-align:center;color:var(--red);padding:20px;">Erreur de chargement</td></tr>`;
+  }
+}
+
+function priorityBadge(p) {
+  const cls = (p || 'unscored').toLowerCase();
+  return `<span class="badge ${cls}">${p || '—'}</span>`;
+}
+
+function statusColor(s) {
+  const map = { paid: 'green', contacted: 'green', new: 'info', archived: 'unscored' };
+  return map[s] || 'unscored';
+}
+
+function fmtDate(iso) {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  return d.toLocaleDateString('fr-FR', { day:'2-digit', month:'2-digit', year:'2-digit' });
+}
+
+function renderDashboardLeads() {
+  const tbody = document.getElementById('dashboard-leads-body');
+  const top8 = allLeads.slice(0, 8);
+  if (!top8.length) {
+    tbody.innerHTML = '<tr><td colspan="5"><div class="empty"><div class="empty-icon">📭</div><p>Aucun lead trouvé</p></div></td></tr>';
+    return;
+  }
+  tbody.innerHTML = top8.map(l => `
+    <tr onclick="openLead('${l.id}')">
+      <td>
+        <div class="lead-name">${l.fullname}</div>
+        <div class="lead-sub">${l.email || l.phone || '—'}</div>
+      </td>
+      <td>${l.training}</td>
+      <td>${priorityBadge(l.priority)}</td>
+      <td><span class="badge ${statusColor(l.status)}">${l.status}</span></td>
+      <td>
+        <span class="called-dot" style="background:${l.called ? 'var(--green)' : 'var(--red)'}"></span>
+        ${l.called ? fmtDate(l.called_at) : 'Non'}
+      </td>
+    </tr>
+  `).join('');
+}
+
+function getFilteredLeads() {
+  let leads = allLeads;
+  if (currentFilter === 'uncalled') leads = leads.filter(l => !l.called);
+  else if (currentFilter !== 'all') leads = leads.filter(l => l.priority === currentFilter);
+  if (currentSearch) {
+    const q = currentSearch.toLowerCase();
+    leads = leads.filter(l =>
+      l.fullname.toLowerCase().includes(q) ||
+      (l.training||'').toLowerCase().includes(q) ||
+      (l.email||'').toLowerCase().includes(q) ||
+      (l.phone||'').includes(q)
+    );
+  }
+  return leads;
+}
+
+function renderLeadsTable() {
+  const tbody = document.getElementById('leads-body');
+  const leads = getFilteredLeads();
+  if (!leads.length) {
+    tbody.innerHTML = '<tr><td colspan="8"><div class="empty"><div class="empty-icon">🔍</div><p>Aucun lead correspondant</p></div></td></tr>';
+    return;
+  }
+  tbody.innerHTML = leads.map(l => `
+    <tr onclick="openLead('${l.id}')">
+      <td>
+        <div class="lead-name">${l.fullname}</div>
+        <div class="lead-sub">${l.email || l.phone || '—'}</div>
+      </td>
+      <td>${l.training}</td>
+      <td><span style="font-size:12px;color:var(--text-muted);">${l.source || '—'}</span></td>
+      <td>${priorityBadge(l.priority)}</td>
+      <td style="font-weight:600;">${l.score != null ? l.score : '—'}</td>
+      <td><span class="badge ${statusColor(l.status)}">${l.status}</span></td>
+      <td>
+        <span class="called-dot" style="background:${l.called ? 'var(--green)' : 'var(--red)'}"></span>
+        ${l.called ? 'Oui' : 'Non'}
+      </td>
+      <td style="color:var(--text-muted);font-size:12px;">${fmtDate(l.created_at)}</td>
+    </tr>
+  `).join('');
+}
+
+function filterLeads(f, btn) {
+  currentFilter = f;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderLeadsTable();
+}
+
+function searchLeads(q) {
+  currentSearch = q;
+  renderLeadsTable();
+}
+
+// ══════════ ACTIVITY FEED ══════════
+function buildActivityFeed() {
+  const feed = document.getElementById('activity-feed');
+  if (!allLeads.length) {
+    feed.innerHTML = '<div class="empty"><p>Aucune activité</p></div>';
+    return;
+  }
+
+  const events = [];
+  allLeads.forEach(l => {
+    events.push({ time: l.created_at, icon: '➕', color: 'var(--accent)', label: `Lead créé`, sub: l.fullname });
+    if (l.score != null) events.push({ time: l.created_at, icon: '🎯', color: 'var(--p1)', label: `Scoré ${l.priority}`, sub: l.fullname });
+    if (l.called_at) events.push({ time: l.called_at, icon: '📞', color: 'var(--green)', label: `Appel effectué`, sub: l.fullname });
+  });
+
+  events.sort((a, b) => new Date(b.time) - new Date(a.time));
+  const top8 = events.slice(0, 8);
+
+  feed.innerHTML = top8.map((e, i) => `
+    <div class="activity-item">
+      <div class="activity-dot-wrap">
+        <div class="activity-dot-big" style="background:${e.color}22;">${e.icon}</div>
+        ${i < top8.length - 1 ? '<div class="activity-line"></div>' : ''}
+      </div>
+      <div class="activity-body">
+        <div class="activity-title">${e.label}</div>
+        <div class="activity-sub">${e.sub}</div>
+      </div>
+      <div class="activity-time">${fmtDate(e.time)}</div>
+    </div>
+  `).join('');
+}
+
+// ══════════ LEAD MODAL ══════════
+function openLead(id) {
+  selectedLead = allLeads.find(l => l.id === id);
+  if (!selectedLead) return;
+  const l = selectedLead;
+
+  document.getElementById('modal-name').textContent = l.fullname;
+  document.getElementById('modal-meta').textContent = `${l.training} · ${l.source} · ID: ${l.id.slice(0,8)}…`;
+  document.getElementById('modal-phone').textContent = l.phone || '—';
+  document.getElementById('modal-email').textContent = l.email || '—';
+  document.getElementById('modal-training').textContent = l.training;
+  document.getElementById('modal-source').textContent = l.source || '—';
+  document.getElementById('modal-priority').innerHTML = priorityBadge(l.priority);
+  document.getElementById('modal-score').textContent = l.score != null ? l.score : '—';
+  document.getElementById('modal-status').innerHTML = `<span class="badge ${statusColor(l.status)}">${l.status}</span>`;
+  document.getElementById('modal-payment').textContent = l.payment_status || '—';
+  document.getElementById('modal-called').innerHTML = l.called
+    ? '<span style="color:var(--green)">✓ Oui</span>'
+    : '<span style="color:var(--red)">✗ Non</span>';
+  document.getElementById('modal-called-at').textContent = l.called_at ? new Date(l.called_at).toLocaleString('fr-FR') : '—';
+  document.getElementById('modal-called-by').textContent = l.called_by || '—';
+  document.getElementById('modal-next-action').textContent = l.next_action || '—';
+
+  if (l.notes) {
+    document.getElementById('modal-notes-section').style.display = 'block';
+    document.getElementById('modal-notes').textContent = l.notes;
+  } else {
+    document.getElementById('modal-notes-section').style.display = 'none';
+  }
+
+  // Timeline
+  const tl = [];
+  tl.push({ label: 'Lead créé', time: l.created_at });
+  if (l.score != null) tl.push({ label: `Scoré ${l.priority} (score: ${l.score})`, time: l.created_at });
+  if (l.called_at) tl.push({ label: 'Appel effectué par ' + (l.called_by || 'SDR'), time: l.called_at });
+  if (l.last_contact) tl.push({ label: 'Dernier contact', time: l.last_contact });
+
+  document.getElementById('modal-timeline').innerHTML = tl.map(e => `
+    <div class="tl-item">
+      <div class="tl-dot"></div>
+      <div class="tl-content">
+        <div class="tl-label">${e.label}</div>
+        <div class="tl-time">${e.time ? new Date(e.time).toLocaleString('fr-FR') : '—'}</div>
+      </div>
+    </div>
+  `).join('');
+
+  document.getElementById('lead-modal').classList.add('open');
+}
+
+function closeLeadModal() {
+  document.getElementById('lead-modal').classList.remove('open');
+}
+function closeModal(e) {
+  if (e.target === document.getElementById('lead-modal')) closeLeadModal();
+}
+
+function useInSDR() {
+  if (!selectedLead) return;
+  document.getElementById('sdr-lead-id').value = selectedLead.id;
+  document.getElementById('outcome-lead-id').value = selectedLead.id;
+  closeLeadModal();
+  navigate('sdr');
+}
+
+// ══════════ SDR COPILOT ══════════
+async function generateBrief() {
+  const leadId = document.getElementById('sdr-lead-id').value.trim();
+  if (!leadId) return;
+  document.getElementById('brief-result').style.display = 'none';
+  document.getElementById('brief-error').style.display = 'none';
+  document.getElementById('brief-loading').style.display = 'block';
+  document.getElementById('sdr-brief-btn').disabled = true;
+  try {
+    const r = await api('/sdr/brief', {
+      method: 'POST',
+      body: JSON.stringify({ lead_id: leadId })
+    });
+    document.getElementById('brief-summary').textContent = r.customer_summary || '—';
+    document.getElementById('brief-pitch').textContent = r.suggested_pitch || '—';
+    document.getElementById('brief-objections').textContent = r.predicted_objections || '—';
+    document.getElementById('brief-email').textContent = r.email_draft_html || r.email_draft || '—';
+    document.getElementById('brief-result').style.display = 'block';
+  } catch(e) {
+    document.getElementById('brief-error').style.display = 'block';
+    document.getElementById('brief-error').textContent = '❌ ' + e.message;
+  } finally {
+    document.getElementById('brief-loading').style.display = 'none';
+    document.getElementById('sdr-brief-btn').disabled = false;
+  }
+}
+
+async function processOutcome() {
+  const leadId = document.getElementById('outcome-lead-id').value.trim();
+  const outcome = document.getElementById('outcome-issue').value;
+  const notes   = document.getElementById('outcome-notes').value;
+  if (!leadId || !outcome) return;
+  document.getElementById('outcome-result').style.display = 'none';
+  document.getElementById('outcome-error').style.display = 'none';
+  document.getElementById('outcome-btn').disabled = true;
+  document.getElementById('outcome-btn').textContent = '⏳ Traitement…';
+  try {
+    const r = await api('/sdr/outcome', {
+      method: 'POST',
+      body: JSON.stringify({ lead_id: leadId, outcome, call_notes: notes })
+    });
+    document.getElementById('outcome-summary').innerHTML = `
+      <b>Nouveau statut :</b> ${r.new_status}<br>
+      <b>Action suivante :</b> ${r.suggested_next_action}<br>
+      <b>Date de relance :</b> ${r.next_followup_date || '—'}<br>
+      ${r.call_summary ? `<b>Résumé :</b> ${r.call_summary}` : ''}
+    `;
+    document.getElementById('outcome-result').style.display = 'block';
+    await loadLeads(); // refresh
+  } catch(e) {
+    document.getElementById('outcome-error').style.display = 'block';
+    document.getElementById('outcome-error').textContent = '❌ ' + e.message;
+  } finally {
+    document.getElementById('outcome-btn').disabled = false;
+    document.getElementById('outcome-btn').textContent = 'Traiter le Résultat ✓';
+  }
+}
+
+// ══════════ REPORTS ══════════
+async function loadReports() {
+  try {
+    const r = await api('/reports/daily');
+    document.getElementById('r-total').textContent = r.total_leads_all ?? '—';
+    document.getElementById('r-new24').textContent = `+${r.total_leads_24h ?? 0} (24h)`;
+    document.getElementById('r-p0').textContent = r.p0_leads_count ?? '—';
+    document.getElementById('r-p1').textContent = r.p1_leads_count ?? '—';
+    document.getElementById('r-p2').textContent = r.p2_leads_count ?? '—';
+    document.getElementById('r-conv').textContent = r.conversion_rate_percent != null ? r.conversion_rate_percent + '%' : 'N/A';
+    document.getElementById('r-pending').textContent = r.payment_pending_count ?? '—';
+
+    buildSourceBars(r.leads_by_source ?? {}, 'r-sources');
+    buildSourceBars(r.leads_by_training ?? {}, 'r-trainings');
+
+    document.getElementById('r-activity').innerHTML = `
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <span style="color:var(--text-secondary);font-size:13px;">Appelés aujourd'hui</span>
+        <span style="font-weight:800;font-size:18px;color:var(--green)">${r.called_today ?? 0}</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <span style="color:var(--text-secondary);font-size:13px;">Total jamais appelés</span>
+        <span style="font-weight:800;font-size:18px;color:var(--red)">${r.uncalled_count ?? 0}</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <span style="color:var(--text-secondary);font-size:13px;">Leads contactés</span>
+        <span style="font-weight:800;font-size:18px;color:var(--accent)">${r.contacted_count ?? 0}</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <span style="color:var(--text-secondary);font-size:13px;">Temps réponse moyen</span>
+        <span style="font-weight:800;font-size:18px;color:var(--p1)">${r.average_response_time_minutes ?? 'N/A'} min</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <span style="color:var(--text-secondary);font-size:13px;">Payés</span>
+        <span style="font-weight:800;font-size:18px;color:var(--green)">${r.paid_count ?? 0}</span>
+      </div>
+      <div style="font-size:11px;color:var(--text-muted);margin-top:8px;">Rapport généré le ${r.report_generated_at ?? '—'}</div>
+    `;
+  } catch(e) {
+    console.error('Reports error:', e);
+  }
+}
+
+// ══════════ SYSTEM HEALTH ══════════
+async function loadHealth() {
+  const grid = document.getElementById('health-grid');
+  grid.innerHTML = '<div class="spinner"></div>';
+
+  const services = [
+    { name: 'FastAPI Backend', icon: '⚡', detail: 'localhost:8000', check: () => api('/health') },
+    { name: 'Ollama LLM', icon: '🤖', detail: 'localhost:11434 · qwen2.5:1.5b', check: () => fetch('http://localhost:11434').then(r => ({ ok: r.ok })) },
+    { name: 'Google Sheets', icon: '📊', detail: 'API connectée via service_account.json', check: () => api('/leads?sort_by=priority') },
+    { name: 'Reporting API', icon: '📈', detail: 'GET /reports/daily', check: () => api('/reports/daily') },
+    { name: 'Dashboard API', icon: '🖥️', detail: 'GET /dashboard', check: () => api('/dashboard') },
+  ];
+
+  const results = await Promise.allSettled(services.map(s => s.check()));
+
+  grid.innerHTML = services.map((s, i) => {
+    const ok = results[i].status === 'fulfilled';
+    return `
+      <div class="health-row">
+        <div class="health-service">
+          <div class="health-icon">${s.icon}</div>
+          <div>
+            <div class="health-name">${s.name}</div>
+            <div class="health-detail">${s.detail}</div>
+          </div>
+        </div>
+        <div class="health-status ${ok ? 'status-online' : 'status-offline'}">
+          <div class="dot ${ok ? 'green' : 'red'}"></div>
+          ${ok ? 'ONLINE' : 'OFFLINE'}
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+async function checkSidebarHealth() {
+  try {
+    await api('/health');
+    document.getElementById('sidebar-api-dot').className = 'dot green';
+    document.getElementById('sidebar-api-label').textContent = 'FastAPI · online';
+  } catch {
+    document.getElementById('sidebar-api-dot').className = 'dot red';
+    document.getElementById('sidebar-api-label').textContent = 'FastAPI · offline';
+  }
+}
+
+// ══════════ INIT ══════════
+updateTimestamp();
+refreshAll();
+setInterval(refreshAll, 60000); // auto-refresh every minute
+</script>
+</div>
+</body>
+</html>

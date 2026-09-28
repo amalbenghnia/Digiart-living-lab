@@ -1,0 +1,86 @@
+{
+  "name": "Lead Agent - Daily Sorted Digest",
+  "meta": {
+    "description": "Runs once a day at 8am. Calls GET /leads?sort_by=priority (P0 first, then by score descending within each priority -- see LeadService.get_all_leads). Sends one readable email with the full call list in the right order, so the LLM's scoring work is actually used by a human every morning instead of sitting unread in the Sheet."
+  },
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 8
+            }
+          ]
+        }
+      },
+      "id": "cron-daily-8am",
+      "name": "Every day at 8am",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -40,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "http://127.0.0.1:8000/leads?sort_by=priority",
+        "options": {
+          "timeout": 10000
+        }
+      },
+      "id": "http-get-sorted-leads",
+      "name": "GET /leads?sort_by=priority",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        180,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{$env.NOTIFY_FROM_EMAIL || 'agent@digiart.local'}}",
+        "toEmail": "={{$env.NOTIFY_CM_EMAIL || 'cm@digiart.local'}}",
+        "subject": "=Liste des leads triee - {{$now.format('dd/MM/yyyy')}}",
+        "emailFormat": "html",
+        "html": "=<div style=\"font-family:Arial,sans-serif;max-width:750px;margin:0 auto;\">\n<div style=\"background:linear-gradient(135deg,#1a1a2e,#16213e);color:#fff;padding:20px 24px;border-radius:8px 8px 0 0;\">\n<h2 style=\"margin:0;\">📋 Liste des leads triee — {{$now.format('dd/MM/yyyy')}}</h2>\n<p style=\"margin:6px 0 0;opacity:0.85;\">{{$json.count}} leads tries par priorite puis par score</p>\n</div>\n<div style=\"padding:16px 24px;background:#fff;border:1px solid #e0e0e0;\">\n<p style=\"color:#333;\">Bonjour,<br><br>Voici la liste complete de vos leads du jour, triee par <strong>priorite</strong> puis par <strong>score decroissant</strong>.</p>\n<table style=\"width:100%;border-collapse:collapse;margin:16px 0;font-size:13px;\">\n<thead>\n<tr style=\"background:#1a1a2e;color:#fff;\">\n<th style=\"padding:10px 6px;text-align:center;border:1px solid #333;\">#</th>\n<th style=\"padding:10px 6px;text-align:center;border:1px solid #333;\">Priorite</th>\n<th style=\"padding:10px 6px;text-align:left;border:1px solid #333;\">Nom complet</th>\n<th style=\"padding:10px 6px;text-align:left;border:1px solid #333;\">Telephone</th>\n<th style=\"padding:10px 6px;text-align:left;border:1px solid #333;\">Formation</th>\n<th style=\"padding:10px 6px;text-align:center;border:1px solid #333;\">Score</th>\n<th style=\"padding:10px 6px;text-align:center;border:1px solid #333;\">Appele</th>\n</tr>\n</thead>\n<tbody>\n{{ $json.leads.map((l, i) => { const colors = {P0:'#dc3545',P1:'#fd7e14',P2:'#0d6efd',P3:'#6c757d'}; const bg = i % 2 === 0 ? '#fff' : '#f8f9fa'; const pColor = colors[l.priority] || '#6c757d'; return '<tr style=\"background:' + bg + ';\"><td style=\"padding:8px 6px;border:1px solid #ddd;text-align:center;\">' + (i+1) + '</td><td style=\"padding:8px 6px;border:1px solid #ddd;text-align:center;\"><span style=\"background:' + pColor + ';color:#fff;padding:3px 10px;border-radius:12px;font-weight:bold;font-size:12px;\">' + l.priority + '</span></td><td style=\"padding:8px 6px;border:1px solid #ddd;font-weight:bold;\">' + l.fullname + '</td><td style=\"padding:8px 6px;border:1px solid #ddd;\"><a href=\"tel:' + l.phone + '\" style=\"color:#1a1a2e;text-decoration:none;\">' + l.phone + '</a></td><td style=\"padding:8px 6px;border:1px solid #ddd;\">' + l.training + '</td><td style=\"padding:8px 6px;border:1px solid #ddd;text-align:center;font-weight:bold;\">' + l.score + '</td><td style=\"padding:8px 6px;border:1px solid #ddd;text-align:center;\">' + (l.called ? '<span style=\"color:#198754;\">✅ ' + (l.called_by || 'Oui') + '</span>' : '<span style=\"color:#dc3545;font-weight:bold;\">❌ Non</span>') + '</td></tr>'; }).join('') }}\n</tbody>\n</table>\n<div style=\"background:#e8f4fd;padding:12px 16px;border-radius:4px;margin-top:8px;border-left:4px solid #0d6efd;\">\n<strong>Total :</strong> {{$json.count}} leads | <strong>Legende :</strong> <span style=\"color:#dc3545;\">■</span> P0 <span style=\"color:#fd7e14;\">■</span> P1 <span style=\"color:#0d6efd;\">■</span> P2 <span style=\"color:#6c757d;\">■</span> P3\n</div>\n</div>\n<div style=\"background:#f5f5f5;padding:12px 24px;border-radius:0 0 8px 8px;border:1px solid #e0e0e0;border-top:none;font-size:12px;color:#888;text-align:center;\">\nEmail automatique genere par Lead Agent — Ne pas repondre</div>\n</div>",
+        "text": "=Leads du jour, tries par priorite puis par score :\n\n{{ $json.leads.map((l, i) => `${i+1}. [${l.priority}] ${l.fullname} - score ${l.score} - Appele: ${l.called ? 'Oui (' + l.called_by + ')' : 'Non'} - ${l.phone} - ${l.training}`).join('\\n') }}\n\nTotal : {{$json.count}} leads."
+      },
+      "id": "send-sorted-digest",
+      "name": "Send sorted digest",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        400,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "Every day at 8am": {
+      "main": [
+        [
+          {
+            "node": "GET /leads?sort_by=priority",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GET /leads?sort_by=priority": {
+      "main": [
+        [
+          {
+            "node": "Send sorted digest",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

@@ -1,0 +1,129 @@
+{
+  "name": "Lead Agent - Uncalled P0 Lead Urgent Reminder",
+  "meta": {
+    "description": "Runs every 30 minutes. Calls GET /leads/uncalled-urgent to retrieve all P0 leads that have been sitting uncalled for >2h. Sends an urgent notification email to the SDR / CM so uncalled hot leads are never forgotten."
+  },
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 30
+            }
+          ]
+        }
+      },
+      "id": "cron-30min",
+      "name": "Every 30 minutes",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -40,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "http://127.0.0.1:8000/leads/uncalled-urgent",
+        "options": {
+          "timeout": 10000
+        }
+      },
+      "id": "http-get-uncalled-urgent",
+      "name": "GET /leads/uncalled-urgent",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        180,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "has-uncalled",
+              "leftValue": "={{$json.count}}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "if-any-uncalled",
+      "name": "IF: uncalled P0 leads exist",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        400,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{$env.NOTIFY_FROM_EMAIL || 'agent@digiart.local'}}",
+        "toEmail": "={{$env.NOTIFY_CM_EMAIL || 'cm@digiart.local'}}",
+        "subject": "=⚠️ URGENT : Leads P0 non rappeles depuis +2h ({{$json.count}})",
+        "emailFormat": "html",
+        "html": "=<div style=\"font-family:Arial,sans-serif;max-width:850px;margin:0 auto;\">\n<div style=\"background:#dc3545;color:#fff;padding:16px 24px;border-radius:8px 8px 0 0;\">\n<h2 style=\"margin:0;\">⚠️ URGENT — {{$json.count}} Leads P0 non rappeles</h2>\n<p style=\"margin:4px 0 0;opacity:0.9;\">Ces leads attendent depuis plus de 2 heures !</p>\n</div>\n<div style=\"padding:16px 24px;background:#fff;border:1px solid #e0e0e0;\">\n<p style=\"color:#333;\">Bonjour,<br><br>Les leads suivants sont en <strong>priorite maximale (P0)</strong> et n'ont <strong>toujours pas ete rappeles</strong>. Merci d'agir immediatement.</p>\n<table style=\"width:100%;border-collapse:collapse;margin:16px 0;font-size:14px;\">\n<thead>\n<tr style=\"background:#f8d7da;color:#721c24;\">\n<th style=\"padding:10px 8px;text-align:left;border:1px solid #f5c6cb;\">#</th>\n<th style=\"padding:10px 8px;text-align:left;border:1px solid #f5c6cb;\">Nom complet</th>\n<th style=\"padding:10px 8px;text-align:left;border:1px solid #f5c6cb;\">Telephone</th>\n<th style=\"padding:10px 8px;text-align:left;border:1px solid #f5c6cb;\">Formation</th>\n<th style=\"padding:10px 8px;text-align:center;border:1px solid #f5c6cb;\">Score</th>\n<th style=\"padding:10px 8px;text-align:center;border:1px solid #f5c6cb;\">Attente</th>\n<th style=\"padding:10px 8px;text-align:left;border:1px solid #f5c6cb;\">Assigne a</th>\n<th style=\"padding:10px 8px;text-align:center;border:1px solid #f5c6cb;\">Action</th>\n</tr>\n</thead>\n<tbody>\n{{ $json.leads.map((l, i) => '<tr style=\"background:' + (i % 2 === 0 ? '#fff' : '#f9f9f9') + ';\"><td style=\"padding:8px;border:1px solid #ddd;\">' + (i+1) + '</td><td style=\"padding:8px;border:1px solid #ddd;font-weight:bold;\">' + l.fullname + '</td><td style=\"padding:8px;border:1px solid #ddd;\"><a href=\"tel:' + l.phone + '\" style=\"color:#dc3545;text-decoration:none;font-weight:bold;\">' + l.phone + '</a></td><td style=\"padding:8px;border:1px solid #ddd;\">' + l.training + '</td><td style=\"padding:8px;border:1px solid #ddd;text-align:center;\"><strong>' + l.score + '</strong></td><td style=\"padding:8px;border:1px solid #ddd;text-align:center;color:#dc3545;font-weight:bold;\">' + l.hours_waiting + 'h</td><td style=\"padding:8px;border:1px solid #ddd;\">' + l.assigned_to + '</td><td style=\"padding:8px;border:1px solid #ddd;text-align:center;\"><a href=\"http://localhost:5678/webhook/mark-called?lead_id=' + l.id + '&called_by=Ines\" style=\"display:inline-block;background:#198754;color:#fff;padding:6px 12px;text-decoration:none;border-radius:4px;font-size:12px;font-weight:bold;\">✅ Fait</a></td></tr>').join('') }}\n</tbody>\n</table>\n<p style=\"color:#721c24;font-weight:bold;background:#f8d7da;padding:12px;border-radius:4px;text-align:center;\">🚨 Merci de les appeler immediatement ou de les reassigner !</p>\n</div>\n<div style=\"background:#f5f5f5;padding:12px 24px;border-radius:0 0 8px 8px;border:1px solid #e0e0e0;border-top:none;font-size:12px;color:#888;text-align:center;\">\nEmail automatique genere par Lead Agent — Ne pas repondre</div>\n</div>",
+        "text": "=Attention ! Les leads suivants sont P0 (priorite maximale) et n'ont PAS encore ete rappeles apres plus de 2 heures :\n\n{{ $json.leads.map(l => `- [${l.priority}] ${l.fullname} (${l.training}) - Attente: ${l.hours_waiting}h - Tel: ${l.phone} - Assigne a: ${l.assigned_to}`).join('\\n') }}\n\nMerci de les appeler immediatement ou de les reassigner pour ne pas perdre ces opportunites !"
+      },
+      "id": "send-urgent-reminder-email",
+      "name": "Send urgent reminder email",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        620,
+        220
+      ]
+    }
+  ],
+  "connections": {
+    "Every 30 minutes": {
+      "main": [
+        [
+          {
+            "node": "GET /leads/uncalled-urgent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GET /leads/uncalled-urgent": {
+      "main": [
+        [
+          {
+            "node": "IF: uncalled P0 leads exist",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF: uncalled P0 leads exist": {
+      "main": [
+        [
+          {
+            "node": "Send urgent reminder email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

@@ -1,0 +1,305 @@
+{
+  "name": "Lead Agent - Uncalled Hot Lead Watchdog",
+  "meta": {
+    "description": "Runs every hour. Pulls all leads still in status=new, re-checks each one's real-time hotness via POST /lead/priority (is_hot becomes true once a NEW lead has been sitting longer than LEAD_HOT_RESPONSE_HOURS, per lead_rules.is_lead_older_than_hot_threshold). Never re-implements that threshold in n8n -- always asks the API, single source of truth. Groups all overdue-to-call leads into one digest email to the Community Manager / SDR instead of one email per lead."
+  },
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 1
+            }
+          ]
+        }
+      },
+      "id": "cron-hourly",
+      "name": "Every hour",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -40,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "http://127.0.0.1:8000/leads?sort_by=priority",
+        "options": {
+          "timeout": 10000
+        }
+      },
+      "id": "http-get-leads",
+      "name": "GET /leads?sort_by=priority",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        180,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "leads",
+        "options": {}
+      },
+      "id": "split-leads",
+      "name": "Split leads",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        400,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "is-uncalled",
+              "leftValue": "={{$json.called}}",
+              "rightValue": false,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "filter-new",
+      "name": "Filter: called = false",
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2,
+      "position": [
+        620,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://127.0.0.1:8000/lead/priority",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ lead_id: $json.id }) }}",
+        "options": {
+          "timeout": 15000,
+          "batching": {
+            "batch": {
+              "batchSize": 1,
+              "batchInterval": 8000
+            }
+          }
+        }
+      },
+      "id": "http-recheck-hot",
+      "name": "Re-check is_hot via API",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        840,
+        300
+      ],
+      "notes": "Single source of truth: the 2h threshold lives only in lead_rules.py (LEAD_HOT_RESPONSE_HOURS). n8n never hardcodes it."
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "is-hot",
+              "leftValue": "={{$json.is_hot}}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "if-still-uncalled",
+      "name": "IF: still uncalled and hot",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1060,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "options": {}
+      },
+      "id": "aggregate-uncalled",
+      "name": "Aggregate all uncalled",
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        1280,
+        220
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "has-any",
+              "leftValue": "={{$json.data.length}}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "if-any-uncalled",
+      "name": "IF: at least one",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1500,
+        220
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "send",
+        "subject": "=Leads jamais rappeles ({{$json.data.length}})",
+        "message": "=<div style=\"font-family:Arial,sans-serif;max-width:700px;margin:0 auto;\">\n<div style=\"background:linear-gradient(135deg,#e65100,#ff8f00);color:#fff;padding:16px 24px;border-radius:8px 8px 0 0;\">\n<h2 style=\"margin:0;\">🔥 {{$json.data.length}} Leads jamais rappeles</h2>\n<p style=\"margin:4px 0 0;opacity:0.9;\">Ces leads attendent un appel depuis plus de 2 heures</p>\n</div>\n<div style=\"padding:16px 24px;background:#fff;border:1px solid #e0e0e0;\">\n<p style=\"color:#333;\">Bonjour,<br><br>Les leads suivants sont marques comme <strong>hot</strong> et n'ont <strong>toujours pas ete rappeles</strong>.</p>\n<table style=\"width:100%;border-collapse:collapse;margin:16px 0;font-size:14px;\">\n<thead>\n<tr style=\"background:#fff3e0;color:#e65100;\">\n<th style=\"padding:10px 8px;text-align:left;border:1px solid #ffe0b2;\">#</th>\n<th style=\"padding:10px 8px;text-align:center;border:1px solid #ffe0b2;\">Priorite</th>\n<th style=\"padding:10px 8px;text-align:left;border:1px solid #ffe0b2;\">Nom complet</th>\n<th style=\"padding:10px 8px;text-align:left;border:1px solid #ffe0b2;\">Telephone</th>\n<th style=\"padding:10px 8px;text-align:center;border:1px solid #ffe0b2;\">Score</th>\n</tr>\n</thead>\n<tbody>\n{{ $json.data.map((l, i) => { const colors = {P0:'#dc3545',P1:'#fd7e14',P2:'#0d6efd',P3:'#6c757d'}; const bg = i % 2 === 0 ? '#fff' : '#f9f9f9'; const pColor = colors[l.priority] || '#6c757d'; return '<tr style=\"background:' + bg + ';\"><td style=\"padding:8px;border:1px solid #ddd;\">' + (i+1) + '</td><td style=\"padding:8px;border:1px solid #ddd;text-align:center;\"><span style=\"background:' + pColor + ';color:#fff;padding:3px 10px;border-radius:12px;font-weight:bold;font-size:12px;\">' + l.priority + '</span></td><td style=\"padding:8px;border:1px solid #ddd;font-weight:bold;\">' + l.fullname + '</td><td style=\"padding:8px;border:1px solid #ddd;\"><a href=\"tel:' + l.phone + '\" style=\"color:#e65100;text-decoration:none;font-weight:bold;\">' + l.phone + '</a></td><td style=\"padding:8px;border:1px solid #ddd;text-align:center;font-weight:bold;\">' + l.score + '</td></tr>'; }).join('') }}\n</tbody>\n</table>\n<p style=\"color:#e65100;font-weight:bold;background:#fff3e0;padding:12px;border-radius:4px;text-align:center;\">📞 Merci de les rappeler ou de les reassigner !</p>\n</div>\n<div style=\"background:#f5f5f5;padding:12px 24px;border-radius:0 0 8px 8px;border:1px solid #e0e0e0;border-top:none;font-size:12px;color:#888;text-align:center;\">\nEmail automatique genere par Lead Agent — Ne pas repondre</div>\n</div>",
+        "toList": [
+          "={{$env.NOTIFY_CM_EMAIL || 'cm@digiart.local'}}"
+        ],
+        "options": {}
+      },
+      "id": "send-digest-email",
+      "name": "Send digest to Community Manager",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        1720,
+        220
+      ]
+    }
+  ],
+  "connections": {
+    "Every hour": {
+      "main": [
+        [
+          {
+            "node": "GET /leads?sort_by=priority",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GET /leads?sort_by=priority": {
+      "main": [
+        [
+          {
+            "node": "Split leads",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split leads": {
+      "main": [
+        [
+          {
+            "node": "Filter: called = false",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter: called = false": {
+      "main": [
+        [
+          {
+            "node": "Re-check is_hot via API",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Re-check is_hot via API": {
+      "main": [
+        [
+          {
+            "node": "IF: still uncalled and hot",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF: still uncalled and hot": {
+      "main": [
+        [
+          {
+            "node": "Aggregate all uncalled",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Aggregate all uncalled": {
+      "main": [
+        [
+          {
+            "node": "IF: at least one",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF: at least one": {
+      "main": [
+        [
+          {
+            "node": "Send digest to Community Manager",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    }
+  }
+}

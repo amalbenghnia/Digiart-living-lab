@@ -1,0 +1,186 @@
+{
+    "name":  "Content Agent - Weekly Social Media Generator",
+    "nodes":  [
+                  {
+                      "parameters":  {
+                                         "rule":  {
+                                                      "interval":  [
+                                                                       {
+                                                                           "field":  "cronExpression",
+                                                                           "expression":  "0 9 * * 1"
+                                                                       }
+                                                                   ]
+                                                  }
+                                     },
+                      "name":  "Every Monday 9AM",
+                      "type":  "n8n-nodes-base.scheduleTrigger",
+                      "typeVersion":  1.1,
+                      "position":  [
+                                       250,
+                                       300
+                                   ]
+                  },
+                  {
+                      "parameters":  {
+                                         "url":  "http://127.0.0.1:8000/content/upcoming-courses?days_ahead=14",
+                                         "options":  {
+
+                                                     }
+                                     },
+                      "name":  "Get Upcoming Courses",
+                      "type":  "n8n-nodes-base.httpRequest",
+                      "typeVersion":  4.1,
+                      "position":  [
+                                       450,
+                                       300
+                                   ]
+                  },
+                  {
+                      "parameters":  {
+                                         "conditions":  {
+                                                            "number":  [
+                                                                           {
+                                                                               "value1":  "={{ $json.count }}",
+                                                                               "operation":  "larger",
+                                                                               "value2":  0
+                                                                           }
+                                                                       ]
+                                                        }
+                                     },
+                      "name":  "Any courses upcoming?",
+                      "type":  "n8n-nodes-base.if",
+                      "typeVersion":  1,
+                      "position":  [
+                                       650,
+                                       300
+                                   ]
+                  },
+                  {
+                      "parameters":  {
+                                         "jsCode":  "const courses = $input.first().json.courses;\nconst results = [];\nfor (const course of courses) {\n  results.push({ json: { course_title: course.course_title } });\n}\nreturn results;"
+                                     },
+                      "name":  "Extract Course Titles",
+                      "type":  "n8n-nodes-base.code",
+                      "typeVersion":  2,
+                      "position":  [
+                                       850,
+                                       280
+                                   ]
+                  },
+                  {
+                      "parameters":  {
+                                         "url":  "http://127.0.0.1:8000/content/generate-post",
+                                         "method":  "POST",
+                                         "sendBody":  true,
+                                         "specifyBody":  "json",
+                                         "jsonBody":  "={{ JSON.stringify({ course_title: $json.course_title, platform: \u0027linkedin\u0027 }) }}",
+                                         "options":  {
+                                                         "timeout":  180000,
+                                                         "batching":  {
+                                                                          "batch":  {
+                                                                                        "batchSize":  1,
+                                                                                        "batchInterval":  45000
+                                                                                    }
+                                                                      }
+                                                     }
+                                     },
+                      "name":  "Generate LinkedIn Post",
+                      "type":  "n8n-nodes-base.httpRequest",
+                      "typeVersion":  4.2,
+                      "position":  [
+                                       1050,
+                                       280
+                                   ]
+                  },
+                  {
+                      "parameters":  {
+                                         "sendTo":  "votreadresse@gmail.com",
+                                         "subject":  "=ðŸ“¢ Post LinkedIn : {{ $json.course_title }}",
+                                         "emailType":  "html",
+                                         "message":  "=\u003cdiv style=\"font-family: \u0027Segoe UI\u0027, Arial, sans-serif; max-width: 700px; margin: 0 auto;\"\u003e\n\n\u003cdiv style=\"background: linear-gradient(135deg, #1a237e 0%, #283593 100%); padding: 30px; border-radius: 12px 12px 0 0;\"\u003e\n  \u003ch1 style=\"color: #ffffff; margin: 0; font-size: 22px;\"\u003eðŸ“¢ Post LinkedIn PrÃªt\u003c/h1\u003e\n  \u003cp style=\"color: #ff6f00; margin: 8px 0 0; font-size: 16px; font-weight: 600;\"\u003e{{ $json.course_title }}\u003c/p\u003e\n\u003c/div\u003e\n\n\u003cdiv style=\"background: #f8f9fa; padding: 25px; border-left: 1px solid #e0e0e0; border-right: 1px solid #e0e0e0;\"\u003e\n\n  \u003cdiv style=\"background: #ffffff; border-radius: 8px; padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);\"\u003e\n    \u003ch2 style=\"color: #1a237e; margin: 0 0 10px; font-size: 16px;\"\u003eðŸª Accroche\u003c/h2\u003e\n    \u003cp style=\"font-size: 15px; font-weight: 600; color: #1e293b;\"\u003e{{ $json.hook }}\u003c/p\u003e\n  \u003c/div\u003e\n\n  \u003cdiv style=\"background: #ffffff; border-radius: 8px; padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);\"\u003e\n    \u003ch2 style=\"color: #1a237e; margin: 0 0 10px; font-size: 16px;\"\u003eðŸ“ Post complet (copier-coller sur LinkedIn)\u003c/h2\u003e\n    \u003cdiv style=\"background: #f0f4ff; padding: 15px; border-radius: 6px; white-space: pre-wrap; font-size: 14px; line-height: 1.6;\"\u003e{{ $json.full_post }}\u003c/div\u003e\n  \u003c/div\u003e\n\n  \u003cdiv style=\"background: #e8f5e9; border-radius: 8px; padding: 15px; margin-bottom: 20px; border-left: 4px solid #4caf50;\"\u003e\n    \u003ch2 style=\"color: #2e7d32; margin: 0 0 8px; font-size: 14px;\"\u003eðŸ”— Lien d\u0027inscription Ã  inclure dans le post :\u003c/h2\u003e\n    \u003ca href=\"{{ $json.image_local_path ? \"https://netinfo.tn/inscription\" : \"https://netinfo.tn/inscription\" }}\" style=\"color: #1565c0; font-weight: 600;\"\u003e{{ $json.image_local_path ? \"https://netinfo.tn/inscription\" : \"https://netinfo.tn/inscription\" }}\"background: #ffffff; border-radius: 8px; padding: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); text-align: center;\"\u003e\n    \u003ch2 style=\"color: #ff6f00; margin: 0 0 15px; font-size: 16px; text-align: left;\"\u003eðŸ–¼ï¸ Image gÃ©nÃ©rÃ©e (charte DigiArt)\u003c/h2\u003e\n    \u003cimg src=\"{{ $json.image_url }}\" alt=\"Image promotionnelle DigiArt\" style=\"max-width: 100%; border-radius: 8px; border: 2px solid #e0e0e0;\"\u003e\n    \u003cp style=\"font-size: 12px; color: #64748b; margin-top: 10px; text-align: left;\"\u003eðŸ’¡ Clic-droit â†’ Enregistrer l\u0027image, puis publiez-la avec le post sur LinkedIn/Instagram.\u003c/p\u003e\n  \u003c/div\u003e\n\n\u003c/div\u003e\n\n\u003cdiv style=\"background: #1a237e; padding: 15px; border-radius: 0 0 12px 12px; text-align: center;\"\u003e\n  \u003cp style=\"color: #ffffff; margin: 0; font-size: 12px;\"\u003eGÃ©nÃ©rÃ© par DigiArt Content Agent ðŸ¤–\u003c/p\u003e\n\u003c/div\u003e\n\n\u003c/div\u003e",
+                                         "options":  {
+
+                                                     }
+                                     },
+                      "name":  "Send Email",
+                      "type":  "n8n-nodes-base.gmail",
+                      "typeVersion":  2.1,
+                      "position":  [
+                                       1280,
+                                       280
+                                   ],
+                      "credentials":  {
+                                          "gmailOAuth2":  {
+                                                              "id":  "gmail",
+                                                              "name":  "Gmail account"
+                                                          }
+                                      }
+                  }
+              ],
+    "connections":  {
+                        "Every Monday 9AM":  {
+                                                 "main":  [
+                                                              [
+                                                                  {
+                                                                      "node":  "Get Upcoming Courses",
+                                                                      "type":  "main",
+                                                                      "index":  0
+                                                                  }
+                                                              ]
+                                                          ]
+                                             },
+                        "Get Upcoming Courses":  {
+                                                     "main":  [
+                                                                  [
+                                                                      {
+                                                                          "node":  "Any courses upcoming?",
+                                                                          "type":  "main",
+                                                                          "index":  0
+                                                                      }
+                                                                  ]
+                                                              ]
+                                                 },
+                        "Any courses upcoming?":  {
+                                                      "main":  [
+                                                                   [
+                                                                       {
+                                                                           "node":  "Extract Course Titles",
+                                                                           "type":  "main",
+                                                                           "index":  0
+                                                                       }
+                                                                   ]
+                                                               ]
+                                                  },
+                        "Extract Course Titles":  {
+                                                      "main":  [
+                                                                   [
+                                                                       {
+                                                                           "node":  "Generate LinkedIn Post",
+                                                                           "type":  "main",
+                                                                           "index":  0
+                                                                       }
+                                                                   ]
+                                                               ]
+                                                  },
+                        "Generate LinkedIn Post":  {
+                                                       "main":  [
+                                                                    [
+                                                                        {
+                                                                            "node":  "Send Email",
+                                                                            "type":  "main",
+                                                                            "index":  0
+                                                                        }
+                                                                    ]
+                                                                ]
+                                                   }
+                    },
+    "active":  false,
+    "settings":  {
+                     "executionOrder":  "v1"
+                 },
+    "versionId":  "c8a1d4eb-12ea-43f1-b9cd-90769d675c4e",
+    "id":  "cntAgt001",
+    "tags":  [
+
+             ]
+}

@@ -1,0 +1,584 @@
+﻿{
+    "name":  "Lead Agent - P1/P2 Automated Contact",
+    "meta":  {
+                 "description":  "Runs every hour. Reads all leads from Google Sheet via the API. Filters P1 not called in 24h and P2 not called at all. Calls the LLM to draft a personalised email. Sends the email to the lead (CC Ines). Marks lead as contacted."
+             },
+    "nodes":  [
+                  {
+                      "parameters":  {
+                                         "rule":  {
+                                                      "interval":  [
+                                                                       {
+                                                                           "expression":  "0 9 * * 1-5",
+                                                                           "field":  "cronExpression"
+                                                                       }
+                                                                   ]
+                                                  }
+                                     },
+                      "id":  "cron-hourly-p1p2",
+                      "name":  "Every day at 9am",
+                      "type":  "n8n-nodes-base.scheduleTrigger",
+                      "typeVersion":  1.2,
+                      "position":  [
+                                       -400,
+                                       300
+                                   ]
+                  },
+                  {
+                      "parameters":  {
+                                         "method":  "GET",
+                                         "url":  "http://127.0.0.1:8000/leads?sort_by=priority",
+                                         "options":  {
+                                                         "timeout":  15000
+                                                     }
+                                     },
+                      "id":  "http-get-all-leads",
+                      "name":  "GET /leads",
+                      "type":  "n8n-nodes-base.httpRequest",
+                      "typeVersion":  4.1,
+                      "position":  [
+                                       -180,
+                                       300
+                                   ]
+                  },
+                  {
+                      "parameters":  {
+                                         "fieldToSplitOut":  "leads",
+                                         "options":  {
+
+                                                     }
+                                     },
+                      "id":  "split-leads-p1p2",
+                      "name":  "Split leads",
+                      "type":  "n8n-nodes-base.splitOut",
+                      "typeVersion":  1,
+                      "position":  [
+                                       40,
+                                       300
+                                   ]
+                  },
+                  {
+                      "parameters":  {
+                                         "conditions":  {
+                                                            "options":  {
+                                                                            "caseSensitive":  false,
+                                                                            "typeValidation":  "loose"
+                                                                        },
+                                                            "conditions":  [
+                                                                               {
+                                                                                   "id":  "has-email",
+                                                                                   "leftValue":  "={{$json.email}}",
+                                                                                   "rightValue":  "",
+                                                                                   "operator":  {
+                                                                                                    "type":  "string",
+                                                                                                    "operation":  "notEmpty"
+                                                                                                }
+                                                                               },
+                                                                               {
+                                                                                   "id":  "not-archived",
+                                                                                   "leftValue":  "={{$json.status}}",
+                                                                                   "rightValue":  "archived",
+                                                                                   "operator":  {
+                                                                                                    "type":  "string",
+                                                                                                    "operation":  "notEquals"
+                                                                                                }
+                                                                               },
+                                                                               {
+                                                                                   "id":  "not-already-called",
+                                                                                   "leftValue":  "={{$json.called}}",
+                                                                                   "rightValue":  true,
+                                                                                   "operator":  {
+                                                                                                    "type":  "boolean",
+                                                                                                    "operation":  "notEquals"
+                                                                                                }
+                                                                               },
+                                                                               {
+                                                                                   "id":  "status-is-new",
+                                                                                   "leftValue":  "={{$json.status}}",
+                                                                                   "rightValue":  "new",
+                                                                                   "operator":  {
+                                                                                                    "operation":  "equals",
+                                                                                                    "type":  "string"
+                                                                                                }
+                                                                               }
+                                                                           ],
+                                                            "combinator":  "and"
+                                                        }
+                                     },
+                      "id":  "filter-not-called-with-email",
+                      "name":  "Filter: not called + has email",
+                      "type":  "n8n-nodes-base.filter",
+                      "typeVersion":  2,
+                      "position":  [
+                                       260,
+                                       300
+                                   ]
+                  },
+                  {
+                      "parameters":  {
+                                         "conditions":  {
+                                                            "options":  {
+                                                                            "caseSensitive":  true,
+                                                                            "typeValidation":  "loose"
+                                                                        },
+                                                            "conditions":  [
+                                                                               {
+                                                                                   "id":  "is-p1",
+                                                                                   "leftValue":  "={{$json.priority}}",
+                                                                                   "rightValue":  "P1",
+                                                                                   "operator":  {
+                                                                                                    "type":  "string",
+                                                                                                    "operation":  "equals"
+                                                                                                }
+                                                                               }
+                                                                           ],
+                                                            "combinator":  "and"
+                                                        }
+                                     },
+                      "id":  "if-p1",
+                      "name":  "IF: priority = P1",
+                      "type":  "n8n-nodes-base.if",
+                      "typeVersion":  2,
+                      "position":  [
+                                       480,
+                                       160
+                                   ]
+                  },
+                  {
+                      "parameters":  {
+                                         "conditions":  {
+                                                            "options":  {
+                                                                            "caseSensitive":  true,
+                                                                            "typeValidation":  "loose"
+                                                                        },
+                                                            "conditions":  [
+                                                                               {
+                                                                                   "id":  "is-p2",
+                                                                                   "leftValue":  "={{$json.priority}}",
+                                                                                   "rightValue":  "P2",
+                                                                                   "operator":  {
+                                                                                                    "type":  "string",
+                                                                                                    "operation":  "equals"
+                                                                                                }
+                                                                               }
+                                                                           ],
+                                                            "combinator":  "and"
+                                                        }
+                                     },
+                      "id":  "if-p2",
+                      "name":  "IF: priority = P2",
+                      "type":  "n8n-nodes-base.if",
+                      "typeVersion":  2,
+                      "position":  [
+                                       480,
+                                       440
+                                   ]
+                  },
+                  {
+                      "parameters":  {
+                                         "conditions":  {
+                                                            "options":  {
+                                                                            "caseSensitive":  false,
+                                                                            "typeValidation":  "loose"
+                                                                        },
+                                                            "conditions":  [
+                                                                               {
+                                                                                   "id":  "p1-older-than-24h",
+                                                                                   "leftValue":  "={{ Math.round((new Date().getTime() - new Date($json.created_at).getTime()) / 3600000) }}",
+                                                                                   "rightValue":  24,
+                                                                                   "operator":  {
+                                                                                                    "type":  "number",
+                                                                                                    "operation":  "gte"
+                                                                                                }
+                                                                               }
+                                                                           ],
+                                                            "combinator":  "and"
+                                                        }
+                                     },
+                      "id":  "if-p1-over-24h",
+                      "name":  "IF: P1 older than 24h",
+                      "type":  "n8n-nodes-base.if",
+                      "typeVersion":  2,
+                      "position":  [
+                                       700,
+                                       100
+                                   ]
+                  },
+                  {
+                      "parameters":  {
+                                         "assignments":  {
+                                                             "assignments":  [
+                                                                                 {
+                                                                                     "id":  "save-id",
+                                                                                     "name":  "lead_id",
+                                                                                     "value":  "={{$json.id}}",
+                                                                                     "type":  "string"
+                                                                                 },
+                                                                                 {
+                                                                                     "id":  "save-email",
+                                                                                     "name":  "lead_email",
+                                                                                     "value":  "={{$json.email}}",
+                                                                                     "type":  "string"
+                                                                                 },
+                                                                                 {
+                                                                                     "id":  "save-name",
+                                                                                     "name":  "lead_name",
+                                                                                     "value":  "={{$json.fullname}}",
+                                                                                     "type":  "string"
+                                                                                 },
+                                                                                 {
+                                                                                     "id":  "save-priority",
+                                                                                     "name":  "lead_priority",
+                                                                                     "value":  "={{$json.priority}}",
+                                                                                     "type":  "string"
+                                                                                 }
+                                                                             ]
+                                                         },
+                                         "options":  {
+
+                                                     }
+                                     },
+                      "id":  "save-p1-data",
+                      "name":  "Save P1 lead data",
+                      "type":  "n8n-nodes-base.set",
+                      "typeVersion":  3.3,
+                      "position":  [
+                                       920,
+                                       60
+                                   ],
+                      "notes":  "Saves the lead\u0027s email, id, and name BEFORE calling the LLM, because the LLM response will replace $json."
+                  },
+                  {
+                      "parameters":  {
+                                         "assignments":  {
+                                                             "assignments":  [
+                                                                                 {
+                                                                                     "id":  "save-id-p2",
+                                                                                     "name":  "lead_id",
+                                                                                     "value":  "={{$json.id}}",
+                                                                                     "type":  "string"
+                                                                                 },
+                                                                                 {
+                                                                                     "id":  "save-email-p2",
+                                                                                     "name":  "lead_email",
+                                                                                     "value":  "={{$json.email}}",
+                                                                                     "type":  "string"
+                                                                                 },
+                                                                                 {
+                                                                                     "id":  "save-name-p2",
+                                                                                     "name":  "lead_name",
+                                                                                     "value":  "={{$json.fullname}}",
+                                                                                     "type":  "string"
+                                                                                 },
+                                                                                 {
+                                                                                     "id":  "save-priority-p2",
+                                                                                     "name":  "lead_priority",
+                                                                                     "value":  "={{$json.priority}}",
+                                                                                     "type":  "string"
+                                                                                 }
+                                                                             ]
+                                                         },
+                                         "options":  {
+
+                                                     }
+                                     },
+                      "id":  "save-p2-data",
+                      "name":  "Save P2 lead data",
+                      "type":  "n8n-nodes-base.set",
+                      "typeVersion":  3.3,
+                      "position":  [
+                                       920,
+                                       380
+                                   ]
+                  },
+                  {
+                      "parameters":  {
+                                         "method":  "POST",
+                                         "url":  "={{ \u0027http://127.0.0.1:8000/lead/\u0027 + $json.lead_id + \u0027/generate-email\u0027 }}",
+                                         "sendBody":  true,
+                                         "specifyBody":  "json",
+                                         "jsonBody":  "={{ JSON.stringify({ context: \u0027contact_p1\u0027 }) }}",
+                                         "options":  {
+                                                         "timeout":  30000
+                                                     }
+                                     },
+                      "id":  "llm-generate-p1-email",
+                      "name":  "LLM: Generate P1 email",
+                      "type":  "n8n-nodes-base.httpRequest",
+                      "typeVersion":  4.1,
+                      "position":  [
+                                       1140,
+                                       60
+                                   ]
+                  },
+                  {
+                      "parameters":  {
+                                         "method":  "POST",
+                                         "url":  "={{ \u0027http://127.0.0.1:8000/lead/\u0027 + $json.lead_id + \u0027/generate-email\u0027 }}",
+                                         "sendBody":  true,
+                                         "specifyBody":  "json",
+                                         "jsonBody":  "={{ JSON.stringify({ context: \u0027nurturing_p2\u0027 }) }}",
+                                         "options":  {
+                                                         "timeout":  30000
+                                                     }
+                                     },
+                      "id":  "llm-generate-p2-email",
+                      "name":  "LLM: Generate P2 email",
+                      "type":  "n8n-nodes-base.httpRequest",
+                      "typeVersion":  4.1,
+                      "position":  [
+                                       1140,
+                                       380
+                                   ]
+                  },
+                  {
+                      "parameters":  {
+                                         "resource":  "message",
+                                         "operation":  "send",
+                                         "subject":  "={{$json.subject}}",
+                                         "message":  "={{$json.body_html}}",
+                                         "toList":  [
+                                                        "={{$(\u0027Save P1 lead data\u0027).item.json.lead_email}}"
+                                                    ],
+                                         "ccList":  [
+                                                        "={{$env.NOTIFY_CM_EMAIL || \u0027cm@digiart.local\u0027}}"
+                                                    ],
+                                         "options":  {
+                                                         "appendAttribution":  false
+                                                     }
+                                     },
+                      "id":  "send-p1-email",
+                      "name":  "Send P1 email to lead",
+                      "type":  "n8n-nodes-base.gmail",
+                      "typeVersion":  2.1,
+                      "position":  [
+                                       1360,
+                                       60
+                                   ]
+                  },
+                  {
+                      "parameters":  {
+                                         "resource":  "message",
+                                         "operation":  "send",
+                                         "subject":  "={{$json.subject}}",
+                                         "message":  "={{$json.body_html}}",
+                                         "toList":  [
+                                                        "={{$(\u0027Save P2 lead data\u0027).item.json.lead_email}}"
+                                                    ],
+                                         "ccList":  [
+                                                        "={{$env.NOTIFY_CM_EMAIL || \u0027cm@digiart.local\u0027}}"
+                                                    ],
+                                         "options":  {
+                                                         "appendAttribution":  false
+                                                     }
+                                     },
+                      "id":  "send-p2-email",
+                      "name":  "Send P2 nurturing email",
+                      "type":  "n8n-nodes-base.gmail",
+                      "typeVersion":  2.1,
+                      "position":  [
+                                       1360,
+                                       380
+                                   ]
+                  },
+                  {
+                      "parameters":  {
+                                         "method":  "POST",
+                                         "url":  "={{ \u0027http://127.0.0.1:8000/lead/\u0027 + $(\u0027Save P1 lead data\u0027).item.json.lead_id + \u0027/mark-called\u0027 }}",
+                                         "sendBody":  true,
+                                         "specifyBody":  "json",
+                                         "jsonBody":  "={{ JSON.stringify({ called_by: \u0027Agent automatique (email P1)\u0027 }) }}",
+                                         "options":  {
+                                                         "timeout":  10000
+                                                     }
+                                     },
+                      "id":  "mark-contacted-p1",
+                      "name":  "Mark P1 as contacted",
+                      "type":  "n8n-nodes-base.httpRequest",
+                      "typeVersion":  4.1,
+                      "position":  [
+                                       1580,
+                                       60
+                                   ]
+                  },
+                  {
+                      "parameters":  {
+                                         "method":  "POST",
+                                         "url":  "={{ \u0027http://127.0.0.1:8000/lead/\u0027 + $(\u0027Save P2 lead data\u0027).item.json.lead_id + \u0027/mark-called\u0027 }}",
+                                         "sendBody":  true,
+                                         "specifyBody":  "json",
+                                         "jsonBody":  "={{ JSON.stringify({ called_by: \u0027Agent automatique (email P2)\u0027 }) }}",
+                                         "options":  {
+                                                         "timeout":  10000
+                                                     }
+                                     },
+                      "id":  "mark-contacted-p2",
+                      "name":  "Mark P2 as contacted",
+                      "type":  "n8n-nodes-base.httpRequest",
+                      "typeVersion":  4.1,
+                      "position":  [
+                                       1580,
+                                       380
+                                   ]
+                  }
+              ],
+    "connections":  {
+                        "Every hour":  {
+                                           "main":  [
+                                                        [
+                                                            {
+                                                                "node":  "GET /leads",
+                                                                "type":  "main",
+                                                                "index":  0
+                                                            }
+                                                        ]
+                                                    ]
+                                       },
+                        "GET /leads":  {
+                                           "main":  [
+                                                        [
+                                                            {
+                                                                "node":  "Split leads",
+                                                                "type":  "main",
+                                                                "index":  0
+                                                            }
+                                                        ]
+                                                    ]
+                                       },
+                        "Split leads":  {
+                                            "main":  [
+                                                         [
+                                                             {
+                                                                 "node":  "Filter: not called + has email",
+                                                                 "type":  "main",
+                                                                 "index":  0
+                                                             }
+                                                         ]
+                                                     ]
+                                        },
+                        "Filter: not called + has email":  {
+                                                               "main":  [
+                                                                            [
+                                                                                {
+                                                                                    "node":  "IF: priority = P1",
+                                                                                    "type":  "main",
+                                                                                    "index":  0
+                                                                                },
+                                                                                {
+                                                                                    "node":  "IF: priority = P2",
+                                                                                    "type":  "main",
+                                                                                    "index":  0
+                                                                                }
+                                                                            ]
+                                                                        ]
+                                                           },
+                        "IF: priority = P1":  {
+                                                  "main":  [
+                                                               [
+                                                                   {
+                                                                       "node":  "IF: P1 older than 24h",
+                                                                       "type":  "main",
+                                                                       "index":  0
+                                                                   }
+                                                               ],
+                                                               [
+
+                                                               ]
+                                                           ]
+                                              },
+                        "IF: P1 older than 24h":  {
+                                                      "main":  [
+                                                                   [
+                                                                       {
+                                                                           "node":  "Save P1 lead data",
+                                                                           "type":  "main",
+                                                                           "index":  0
+                                                                       }
+                                                                   ],
+                                                                   [
+
+                                                                   ]
+                                                               ]
+                                                  },
+                        "IF: priority = P2":  {
+                                                  "main":  [
+                                                               [
+                                                                   {
+                                                                       "node":  "Save P2 lead data",
+                                                                       "type":  "main",
+                                                                       "index":  0
+                                                                   }
+                                                               ],
+                                                               [
+
+                                                               ]
+                                                           ]
+                                              },
+                        "Save P1 lead data":  {
+                                                  "main":  [
+                                                               [
+                                                                   {
+                                                                       "node":  "LLM: Generate P1 email",
+                                                                       "type":  "main",
+                                                                       "index":  0
+                                                                   }
+                                                               ]
+                                                           ]
+                                              },
+                        "Save P2 lead data":  {
+                                                  "main":  [
+                                                               [
+                                                                   {
+                                                                       "node":  "LLM: Generate P2 email",
+                                                                       "type":  "main",
+                                                                       "index":  0
+                                                                   }
+                                                               ]
+                                                           ]
+                                              },
+                        "LLM: Generate P1 email":  {
+                                                       "main":  [
+                                                                    [
+                                                                        {
+                                                                            "node":  "Send P1 email to lead",
+                                                                            "type":  "main",
+                                                                            "index":  0
+                                                                        }
+                                                                    ]
+                                                                ]
+                                                   },
+                        "LLM: Generate P2 email":  {
+                                                       "main":  [
+                                                                    [
+                                                                        {
+                                                                            "node":  "Send P2 nurturing email",
+                                                                            "type":  "main",
+                                                                            "index":  0
+                                                                        }
+                                                                    ]
+                                                                ]
+                                                   },
+                        "Send P1 email to lead":  {
+                                                      "main":  [
+                                                                   [
+                                                                       {
+                                                                           "node":  "Mark P1 as contacted",
+                                                                           "type":  "main",
+                                                                           "index":  0
+                                                                       }
+                                                                   ]
+                                                               ]
+                                                  },
+                        "Send P2 nurturing email":  {
+                                                        "main":  [
+                                                                     [
+                                                                         {
+                                                                             "node":  "Mark P2 as contacted",
+                                                                             "type":  "main",
+                                                                             "index":  0
+                                                                         }
+                                                                     ]
+                                                                 ]
+                                                    }
+                    }
+}

@@ -1,0 +1,55 @@
+{
+  "name": "Lead Agent - Mark Called Webhook",
+  "meta": {
+    "description": "Receives a GET request from an email link (clicked by the CM), marks the lead as called via the API."
+  },
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "GET",
+        "path": "mark-called",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "id": "webhook-mark-called",
+      "name": "Webhook: Mark Called",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        200,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ 'http://127.0.0.1:8000/lead/' + $json.query.lead_id + '/mark-called' }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  called_by: $json.query.called_by || \"Ines\"\n}) }}",
+        "options": {}
+      },
+      "id": "http-post-mark-called",
+      "name": "API: Mark Called",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        420,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook: Mark Called": {
+      "main": [
+        [
+          {
+            "node": "API: Mark Called",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}
